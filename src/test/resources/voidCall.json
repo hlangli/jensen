@@ -1,0 +1,16 @@
+{
+	"jsonrpc": "2.0",
+	"id": 3,
+	"method": "dk.nineconsult.jensen.test.JensenTest.voidCall",
+	"params": [
+		{
+			"integer": 99,
+			"string": "weld",
+			"object2": {
+				"svend": "grethe"
+			}
+		},
+		42
+	]
+}
+
