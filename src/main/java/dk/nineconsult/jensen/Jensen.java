@@ -66,7 +66,7 @@ public class Jensen {
 		catch(Throwable e) {
 			response = new Response(id, null, JsonRpcError.PARSE_ERROR.toError(e));
 		}
-		return id != null ? gson.toJson(response) : null;
+		return id != null || request == null ? gson.toJson(response) : null;
 	}
 	
 	private Object invoke(MethodCall methodCall) throws JsonRpcException {
