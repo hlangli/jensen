@@ -75,7 +75,11 @@ public class Jensen {
 		String methodSignature = getMethodSignature(methodCall);
 		try {
 			log.trace("Call "+methodSignature);
-			result = method.invoke(getInstance(method.getDeclaringClass()), methodCall.getParams().toArray());
+			Object instance = null;
+			if(!Modifier.isStatic(method.getModifiers())) {
+				instance = getInstance(method.getDeclaringClass());
+			}
+			result = method.invoke(instance, methodCall.getParams().toArray());
 		}
 		catch(IllegalArgumentException e) {
 			String message = "Method call "+methodSignature+" cannot accept the parameters given ("+methodCall.getParams().size()+(methodCall.getParams().size() == method.getParameterTypes().length ? " = " : " != ")+method.getParameterTypes().length+")";
@@ -157,13 +161,16 @@ public class Jensen {
 		while(methodCall == null && methodIndex <= methods.length) {
 			Method method = methods[methodIndex++];
 			if(method.getName().equals(methodName)) {
-				log.trace("CHECK "+method.getName()+"("+toString(method.getParameterTypes())+")");
-				try {
-					List<Object> params = deserializeParameterList(requestParams, method.getParameterTypes());
-					methodCall = new MethodCall(method, params);
-				}
-				catch(Throwable e) {
-					//FIXME: Swallow and ignore - Bad coding practice.
+				if(Modifier.isPublic(method.getModifiers())) {
+					log.trace("Check method parameter compatibility: "+method.getName()+"("+toString(method.getParameterTypes())+")");
+					try {
+						List<Object> params = deserializeParameterList(requestParams, method.getParameterTypes());
+						log.trace(method.getName()+"("+toString(method.getParameterTypes())+") is compatible with the parameter list");
+						methodCall = new MethodCall(method, params);
+					}
+					catch(Throwable e) {
+						//FIXME: Swallow and ignore - Bad coding practice.
+					}
 				}
 			}
 		}
