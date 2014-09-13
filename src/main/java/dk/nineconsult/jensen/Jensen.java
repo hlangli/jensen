@@ -19,8 +19,10 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class Jensen {
@@ -31,10 +33,13 @@ public class Jensen {
 	private ReturnValueHandler returnValueHandler = null;
 	private ResponseHandler responseHandler = null;
 	private InvocationIntercepter invocationIntercepter = null;
+	private DefaultPrettyPrinter prettyPrinter = new DefaultPrettyPrinter();
+
 	
 	public Jensen() {
 		mapper.setSerializationInclusion(Include.NON_NULL);
 		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		prettyPrinter.indentArraysWith(new DefaultPrettyPrinter.Lf2SpacesIndenter());
 	}
 
 	public String invoke(String jsonRequest) {
@@ -119,7 +124,9 @@ public class Jensen {
 	}
 
 	private void write(Response response, OutputStream out) throws JsonGenerationException, JsonMappingException, IOException {
-		mapper.writeValue(out, response);
+		ObjectWriter writer = mapper.writer();
+		writer = writer.with(prettyPrinter);
+		writer.writeValue(out, response);
 	}
 	
 	private Object invoke(MethodCall methodCall, Request request) throws JsonRpcException {
