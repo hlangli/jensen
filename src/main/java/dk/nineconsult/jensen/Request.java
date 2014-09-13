@@ -2,7 +2,7 @@ package dk.nineconsult.jensen;
 
 import java.util.List;
 
-public class Request extends JsonRpc {
+public class Request extends JsonRpcMessage {
 	private String method = null;
 	private List<Object> params = null;
 	

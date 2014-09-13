@@ -1,13 +1,13 @@
 package dk.nineconsult.jensen;
 
-abstract class JsonRpc {
+abstract class JsonRpcMessage {
 	private String jsonrpc = Jensen.JSONRPC;
 	private Integer id = null;
 
-	public JsonRpc() {
+	public JsonRpcMessage() {
 	}
 
-	public JsonRpc(Integer id) {
+	public JsonRpcMessage(Integer id) {
 		this.id = id;
 	}
 

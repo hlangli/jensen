@@ -1,11 +1,13 @@
 package dk.nineconsult.jensen;
 
 class JsonThrowable {
+	private String exception = null;
 	private String message = null;
 	private String[] stackTrace = null;
 	private JsonThrowable cause = null;
 
 	public JsonThrowable(Throwable target) {
+		exception = target.getClass().getName();
 		message = target.getMessage();
 		StackTraceElement[] stackTrace = target.getStackTrace();
 		this.stackTrace = stackTrace != null ? new String[stackTrace.length] : null;
@@ -15,6 +17,10 @@ class JsonThrowable {
 		}
 		Throwable cause = target.getCause();
 		this.cause = cause != null ? new JsonThrowable(cause) : null;
+	}
+
+	public String getException() {
+		return exception;
 	}
 
 	public String getMessage() {

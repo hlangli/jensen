@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dk.nineconsult.jensen.Jensen;
+import dk.nineconsult.jensen.JsonRpcException;
+import dk.nineconsult.jensen.ReturnValueHandler;
 
 public class JensenTest {
 	private Logger log = LoggerFactory.getLogger(JensenTest.class);
@@ -43,6 +45,21 @@ public class JensenTest {
 	public void testGetObject2() {
 		String jsonRequest = getResource("getObject2.json");
 		log.trace(jsonRequest);
+		String response = new Jensen().invoke(jsonRequest);
+		log.trace(response);
+		String expected = getResource("getObject2-response.json");
+		assert response.trim().equals(expected.trim());
+	}
+
+	@Test
+	public void testReturnValueHandler() {
+		String jsonRequest = getResource("getObject2.json");
+		log.trace(jsonRequest);
+		ReturnValueHandler handler = new ReturnValueHandler() {
+			public Object onReturnValue(Object returnValue) throws JsonRpcException {
+				return null;
+			}
+		};
 		String response = new Jensen().invoke(jsonRequest);
 		log.trace(response);
 		String expected = getResource("getObject2-response.json");

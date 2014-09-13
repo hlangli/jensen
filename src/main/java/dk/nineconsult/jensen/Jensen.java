@@ -19,6 +19,9 @@ public class Jensen {
 	private Logger log = LoggerFactory.getLogger(Jensen.class);
 	private Gson gson = null;
 	private Map<Class<?>, Object> instances = new HashMap<Class<?>, Object>();
+	private ReturnValueHandler returnValueHandler = null;
+	private ResponseHandler responseHandler = null;
+	private InvocationIntercepter invocationIntercepter = null;
 	
 	public Jensen(GsonBuilder gsonBuilder) {
 		gson = gsonBuilder.create();
@@ -50,7 +53,13 @@ public class Jensen {
 				if(request.getJsonrpc().equals(JSONRPC)) {
 					MethodCall methodCall = getMethodCall(request);
 					Object result = invoke(methodCall);
+					if(returnValueHandler != null) {
+						result = returnValueHandler.onReturnValue(result);
+					}
 					response = new Response(id, result, null);
+					if(responseHandler != null) {
+						response = responseHandler.onResponse(response);
+					}
 				}
 				else {
 					throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("JSON-RPC "+request.getJsonrpc()+" is unsupported.  Use "+JSONRPC+" instead")));
@@ -78,6 +87,9 @@ public class Jensen {
 			Object instance = null;
 			if(!Modifier.isStatic(method.getModifiers())) {
 				instance = getInstance(method.getDeclaringClass());
+			}
+			if(invocationIntercepter != null) {
+				invocationIntercepter.onBeforeInvocation(method, instance, methodCall.getParams());
 			}
 			result = method.invoke(instance, methodCall.getParams().toArray());
 		}
@@ -195,5 +207,29 @@ public class Jensen {
 			}
 		}
 		return deserializedparams;
+	}
+
+	public ReturnValueHandler getReturnValueHandler() {
+		return returnValueHandler;
+	}
+
+	public void setReturnValueHandler(ReturnValueHandler returnValueHandler) {
+		this.returnValueHandler = returnValueHandler;
+	}
+
+	public ResponseHandler getResponseHandler() {
+		return responseHandler;
+	}
+
+	public void setResponseHandler(ResponseHandler responseHandler) {
+		this.responseHandler = responseHandler;
+	}
+
+	public InvocationIntercepter getInvocationIntercepter() {
+		return invocationIntercepter;
+	}
+
+	public void setInvocationIntercepter(InvocationIntercepter invocationIntercepter) {
+		this.invocationIntercepter = invocationIntercepter;
 	}
 }

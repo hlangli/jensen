@@ -1,6 +1,6 @@
 package dk.nineconsult.jensen;
 
-public class Response extends JsonRpc {
+public class Response extends JsonRpcMessage {
 	private Object result = null;
 	private Error error = null;
 	
