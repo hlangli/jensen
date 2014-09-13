@@ -23,8 +23,13 @@ public class JensenTest {
 		return object1.getObject2();
 	}
 	
+	public void notification(Object1 object1, int år) {
+		log.trace("Testing notify");
+	}
+	
 	@Test
 	public void testNotification() {
+		log.trace("testNotification()");
 		String jsonRequest = getResource("notification.json");
 		log.trace(jsonRequest);
 		String response = new Jensen().invoke(jsonRequest);
@@ -33,6 +38,7 @@ public class JensenTest {
 
 	@Test
 	public void testVoidCall() {
+		log.trace("testVoidCall()");
 		String jsonRequest = getResource("voidCall.json");
 		log.trace(jsonRequest);
 		String response = new Jensen().invoke(jsonRequest);
@@ -43,6 +49,7 @@ public class JensenTest {
 
 	@Test
 	public void testGetObject2() {
+		log.trace("testGetObject2()");
 		String jsonRequest = getResource("getObject2.json");
 		log.trace(jsonRequest);
 		String response = new Jensen().invoke(jsonRequest);
@@ -53,16 +60,19 @@ public class JensenTest {
 
 	@Test
 	public void testReturnValueHandler() {
+		log.trace("testReturnValueHandler()");
 		String jsonRequest = getResource("getObject2.json");
 		log.trace(jsonRequest);
 		ReturnValueHandler handler = new ReturnValueHandler() {
 			public Object onReturnValue(Object returnValue) throws JsonRpcException {
-				return null;
+				return "Return value changed to a string";
 			}
 		};
-		String response = new Jensen().invoke(jsonRequest);
+		Jensen jensen = new Jensen();
+		jensen.setReturnValueHandler(handler);
+		String response = jensen.invoke(jsonRequest);
 		log.trace(response);
-		String expected = getResource("getObject2-response.json");
+		String expected = getResource("returnValueHandler-response.json");;
 		assert response.trim().equals(expected.trim());
 	}
 

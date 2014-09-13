@@ -16,11 +16,11 @@ public enum JsonRpcError {
 		this.message = message;
 	}
 	
-	public Error toError() {
-		return toError(null);
+	public Error toError(Request request) {
+		return toError(null, request);
 	}
 
-	public Error toError(Throwable e) {
-		return new Error(code, message, new JsonThrowable(e));
+	public Error toError(Throwable e, Request request) {
+		return new Error(code, message, new JsonThrowable(e, request));
 	}
 }

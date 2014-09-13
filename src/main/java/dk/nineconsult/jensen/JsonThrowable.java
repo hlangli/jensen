@@ -5,8 +5,14 @@ class JsonThrowable {
 	private String message = null;
 	private String[] stackTrace = null;
 	private JsonThrowable cause = null;
+	private Request request = null;
 
 	public JsonThrowable(Throwable target) {
+		this(target, null);
+	}
+
+	public JsonThrowable(Throwable target, Request request) {
+		this.request = request;
 		exception = target.getClass().getName();
 		message = target.getMessage();
 		StackTraceElement[] stackTrace = target.getStackTrace();
@@ -33,5 +39,9 @@ class JsonThrowable {
 
 	public JsonThrowable getCause() {
 		return cause;
+	}
+
+	public Request getRequest() {
+		return request;
 	}
 }

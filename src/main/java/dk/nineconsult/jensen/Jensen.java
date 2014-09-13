@@ -1,5 +1,9 @@
 package dk.nineconsult.jensen;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -8,51 +12,59 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class Jensen {
 	protected static final String JSONRPC = "2.0";
 	private Logger log = LoggerFactory.getLogger(Jensen.class);
-	private Gson gson = null;
+	private ObjectMapper mapper = new ObjectMapper();
 	private Map<Class<?>, Object> instances = new HashMap<Class<?>, Object>();
 	private ReturnValueHandler returnValueHandler = null;
 	private ResponseHandler responseHandler = null;
 	private InvocationIntercepter invocationIntercepter = null;
 	
-	public Jensen(GsonBuilder gsonBuilder) {
-		gson = gsonBuilder.create();
-	}
-
 	public Jensen() {
-		try {
-			GsonBuilder gsonBuilder = new GsonBuilder();
-			gsonBuilder.disableHtmlEscaping();
-			gsonBuilder.enableComplexMapKeySerialization();
-			gsonBuilder.setDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
-			gsonBuilder.setPrettyPrinting();
-			gsonBuilder.excludeFieldsWithModifiers(Modifier.TRANSIENT);
-			gson = gsonBuilder.create();
-		}
-		catch(Throwable e) {
-			log.error("Cannot instantiate gson");
-		}
+		mapper.setSerializationInclusion(Include.NON_NULL);
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
 	}
 
 	public String invoke(String jsonRequest) {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		invoke(jsonRequest, out);
+		return out.size() == 0 ? null : out.toString();
+	}
+
+	public void invoke(InputStream jsonRequest, OutputStream out) {
+		String request = null;
+		try {
+			request = IOUtils.toString(jsonRequest);
+		}
+		catch(IOException e) {
+			log.error("Cannot read jsonRequest from InputStream", e);
+		}
+		invoke(request, out);
+	}
+
+	public void invoke(String jsonRequest, OutputStream out) {
 		Response response = null;
 		Request request = null;
 		Integer id = null;
 		try {
-			request = gson.fromJson(jsonRequest, Request.class);
+			request = mapper.readValue(jsonRequest, Request.class);
 			id = request != null ? request.getId() : null;
 			if(request != null) {
 				if(request.getJsonrpc().equals(JSONRPC)) {
 					MethodCall methodCall = getMethodCall(request);
-					Object result = invoke(methodCall);
+					Object result = invoke(methodCall, request);
 					if(returnValueHandler != null) {
 						result = returnValueHandler.onReturnValue(result);
 					}
@@ -62,23 +74,55 @@ public class Jensen {
 					}
 				}
 				else {
-					throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("JSON-RPC "+request.getJsonrpc()+" is unsupported.  Use "+JSONRPC+" instead")));
+					throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("JSON-RPC "+request.getJsonrpc()+" is unsupported.  Use "+JSONRPC+" instead"), request));
 				}
 			}
 			else {
-				throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("Request is missing")));
+				throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("Request is missing"), request));
 			}
 		}
 		catch(JsonRpcException e) {
 			response = new Response(id, null, e.getError());
 		}
 		catch(Throwable e) {
-			response = new Response(id, null, JsonRpcError.PARSE_ERROR.toError(e));
+			response = new Response(id, null, JsonRpcError.PARSE_ERROR.toError(e, request));
 		}
-		return id != null || request == null ? gson.toJson(response) : null;
+		if(id != null || request == null) {
+			try {
+				mapper.writeValue(out, response);
+			}
+			catch(JsonGenerationException e) {
+				tryWrite(new Response(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+			}
+			catch(JsonMappingException e) {
+				tryWrite(new Response(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+			}
+			catch(IOException e) {
+				tryWrite(new Response(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+			}
+		}
 	}
 	
-	private Object invoke(MethodCall methodCall) throws JsonRpcException {
+	private void tryWrite(Response response, OutputStream out) {
+		try {
+			write(response, out);
+		}
+		catch(JsonGenerationException e) {
+			log.error("Cannot write response to OutputStream", e);
+		}
+		catch(JsonMappingException e) {
+			log.error("Cannot write response to OutputStream", e);
+		}
+		catch(IOException e) {
+			log.error("Cannot write response to OutputStream", e);
+		}
+	}
+
+	private void write(Response response, OutputStream out) throws JsonGenerationException, JsonMappingException, IOException {
+		mapper.writeValue(out, response);
+	}
+	
+	private Object invoke(MethodCall methodCall, Request request) throws JsonRpcException {
 		Object result = null;
 		Method method = methodCall.getMethod();
 		String methodSignature = getMethodSignature(methodCall);
@@ -86,7 +130,7 @@ public class Jensen {
 			log.trace("Call "+methodSignature);
 			Object instance = null;
 			if(!Modifier.isStatic(method.getModifiers())) {
-				instance = getInstance(method.getDeclaringClass());
+				instance = getInstance(method.getDeclaringClass(), request);
 			}
 			if(invocationIntercepter != null) {
 				invocationIntercepter.onBeforeInvocation(method, instance, methodCall.getParams());
@@ -96,17 +140,17 @@ public class Jensen {
 		catch(IllegalArgumentException e) {
 			String message = "Method call "+methodSignature+" cannot accept the parameters given ("+methodCall.getParams().size()+(methodCall.getParams().size() == method.getParameterTypes().length ? " = " : " != ")+method.getParameterTypes().length+")";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message)));
+			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request));
 		}
 		catch(IllegalAccessException e) {
 			String message = "Method call "+methodSignature+" cannot be accessed";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message)));
+			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request));
 		}
 		catch(InvocationTargetException e) {
 			String message = "Method call "+methodSignature+" threw an Exception";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.SERVER_ERROR.toError(e.getTargetException()));
+			throw new JsonRpcException(JsonRpcError.SERVER_ERROR.toError(e.getTargetException(), request));
 		}
 		return result;
 	}
@@ -122,7 +166,7 @@ public class Jensen {
 		return methodSignature;
 	}
 	
-	private Object getInstance(Class<?> clazz) throws JsonRpcException {
+	private Object getInstance(Class<?> clazz, Request request) throws JsonRpcException {
 		Object instance = instances.get(clazz);
 		if(instance == null) {
 			try {
@@ -132,12 +176,12 @@ public class Jensen {
 			catch(InstantiationException e) {
 				String message = "Class "+clazz.getSimpleName()+" cannot be instantiated with a no-args constructor";
 				log.warn(message, e);
-				throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message)));
+				throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message), request));
 			}
 			catch(IllegalAccessException e) {
 				String message = "Class "+clazz.getSimpleName()+" must not be instantiated with a no-args constructor";
 				log.warn(message, e);
-				throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message)));
+				throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message), request));
 			}
 		}
 		return instance;
@@ -156,12 +200,12 @@ public class Jensen {
 			methodCall = getMethodCall(clazz, methodName, requestParams);
 		}
 		catch(Throwable e) {
-			throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(e));
+			throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(e, request));
 		}
 		if(methodCall == null) {
 			String message = "No method \""+methodName+"\" in class "+className+" can take the given parameter types";
 			log.warn(message);
-			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message)));
+			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request));
 		}
 		return methodCall;
 	}
@@ -170,7 +214,7 @@ public class Jensen {
 		MethodCall methodCall = null;
 		Method[] methods = clazz.getMethods();
 		int methodIndex = 0;
-		while(methodCall == null && methodIndex <= methods.length) {
+		while(methodCall == null && methodIndex < methods.length) {
 			Method method = methods[methodIndex++];
 			if(method.getName().equals(methodName)) {
 				if(Modifier.isPublic(method.getModifiers())) {
@@ -181,6 +225,7 @@ public class Jensen {
 						methodCall = new MethodCall(method, params);
 					}
 					catch(Throwable e) {
+						log.error(method.getName()+"() does not match");
 						//FIXME: Swallow and ignore - Bad coding practice.
 					}
 				}
@@ -198,11 +243,11 @@ public class Jensen {
 		return parmTypes;
 	}
 	
-	private List<Object> deserializeParameterList(List<Object> params, Class<?>[] parameterTypes) {
+	private List<Object> deserializeParameterList(List<Object> params, Class<?>[] parameterTypes) throws JsonParseException, JsonMappingException, IOException {
 		List<Object> deserializedparams = new ArrayList<Object>();
 		if(params.size() == parameterTypes.length) {
 			for(int i=0; i<parameterTypes.length; i++) {
-				Object o = gson.fromJson(params.get(i).toString(), parameterTypes[i]);
+				Object o = mapper.readValue(mapper.writeValueAsBytes(params.get(i)), parameterTypes[i]);
 				deserializedparams.add(o);
 			}
 		}
