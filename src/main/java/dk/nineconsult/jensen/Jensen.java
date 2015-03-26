@@ -7,11 +7,9 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import com.fasterxml.jackson.databind.*;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +18,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class Jensen {
 	protected static final String JSONRPC = "2.0";
@@ -34,8 +28,31 @@ public class Jensen {
 	private ResponseHandler responseHandler = null;
 	private InvocationIntercepter invocationIntercepter = null;
 	private DefaultPrettyPrinter prettyPrinter = new DefaultPrettyPrinter();
+	private List<String> allowedPackages = new LinkedList<>();
 
-	
+
+	public Jensen(JensenBuilder builder) {
+		for (SerializationFeature feature: builder.enabledSerializationFeatures) {
+			mapper.enable(feature);
+		}
+
+		for (SerializationFeature feature: builder.disabledSerializationFeatures) {
+			mapper.disable(feature);
+		}
+
+		for (Class<? extends Module> module: builder.modules) {
+			try {
+				mapper = mapper.registerModule(module.newInstance());
+			} catch (InstantiationException|IllegalAccessException e) {
+				log.warn(String.format("Failed to register module %s", module.getName()), e);
+			}
+		}
+
+		allowedPackages.addAll(builder.allowedPackages);
+	}
+
+
+	@Deprecated()
 	public Jensen() {
 		mapper.setSerializationInclusion(Include.NON_NULL);
 		mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -69,6 +86,20 @@ public class Jensen {
 			id = request != null ? request.getId() : null;
 			if(request != null) {
 				if(request.getJsonrpc().equals(JSONRPC)) {
+					// Check method is allowed
+					if (allowedPackages.size() > 0) {
+						boolean allowed = false;
+						for (String pck: allowedPackages) {
+							if (request.getMethod().startsWith(pck)) {
+								allowed = true;
+								break;
+							}
+						}
+						if (!allowed) {
+							throw new IllegalArgumentException(String.format("Invocation of %s not allowed", request.getMethod()));
+						}
+					}
+
 					MethodCall methodCall = getMethodCall(request);
 					Object result = invoke(methodCall, request);
 					if(returnValueHandler != null) {
@@ -90,7 +121,7 @@ public class Jensen {
 		catch(JsonRpcException e) {
 			response = new Response(id, null, e.getError());
 		}
-		catch(Throwable e) {
+		catch(Exception e) {
 			response = new Response(id, null, JsonRpcError.PARSE_ERROR.toError(e, request));
 		}
 		if(id != null || request == null) {
@@ -108,7 +139,7 @@ public class Jensen {
 			}
 		}
 	}
-	
+
 	private void tryWrite(Response response, OutputStream out) {
 		try {
 			write(response, out);
@@ -129,7 +160,7 @@ public class Jensen {
 		writer = writer.with(prettyPrinter);
 		writer.writeValue(out, response);
 	}
-	
+
 	private Object invoke(MethodCall methodCall, Request request) throws JsonRpcException {
 		Object result = null;
 		Method method = methodCall.getMethod();
@@ -162,7 +193,7 @@ public class Jensen {
 		}
 		return result;
 	}
-	
+
 	private String getMethodSignature(MethodCall methodCall) {
 		Method method = methodCall.getMethod();
 		List<Object> params = methodCall.getParams();
@@ -173,7 +204,7 @@ public class Jensen {
 		methodSignature += ")";
 		return methodSignature;
 	}
-	
+
 	private Object getInstance(Class<?> clazz, Request request) throws JsonRpcException {
 		Object instance = instances.get(clazz);
 		if(instance == null) {
@@ -194,7 +225,7 @@ public class Jensen {
 		}
 		return instance;
 	}
-	
+
 	private MethodCall getMethodCall(Request request) throws JsonRpcException {
 		MethodCall methodCall = null;
 		String qualifiedMethodName = request.getMethod();
@@ -217,7 +248,7 @@ public class Jensen {
 		}
 		return methodCall;
 	}
-	
+
 	private MethodCall getMethodCall(Class<?> clazz, String methodName, List<Object> requestParams) {
 		MethodCall methodCall = null;
 		Method[] methods = clazz.getMethods();
@@ -241,7 +272,7 @@ public class Jensen {
 		}
 		return methodCall;
 	}
-	
+
 	private String toString(Class<?>[] parameterTypes) {
 		String parmTypes = "";
 		for(int i=0; parameterTypes != null && i<parameterTypes.length; i++) {
@@ -250,7 +281,7 @@ public class Jensen {
 		}
 		return parmTypes;
 	}
-	
+
 	private List<Object> deserializeParameterList(List<Object> params, Class<?>[] parameterTypes) throws JsonParseException, JsonMappingException, IOException {
 		List<Object> deserializedparams = new ArrayList<Object>();
 		if(params.size() == parameterTypes.length) {
