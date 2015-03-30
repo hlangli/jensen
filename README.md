@@ -19,4 +19,4 @@ Jensen is a generic, reflection-based JSON-RPC bridge for java.  No configuratio
 	]
 }</pre>
 
-There might be some security-concerns, like if someone were to call "java.lang.System.exit" or something more exotic.  I might fix that in version 2.
+Jensen can be configured using the JensenBuilder.  It is possible to adjust the ObjectMapper accordingly and add Jacskon modules.  Security is handled in the allowedPackages variable where one can set package-prefixes for the classes and methods that are allowed to be invoked.
