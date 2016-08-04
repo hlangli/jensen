@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 public class Error {
 	private Integer code = null;

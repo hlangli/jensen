@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 public enum JsonRpcError {
 	PARSE_ERROR(-32700, "Parse error"),

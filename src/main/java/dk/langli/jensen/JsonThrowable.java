@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 class JsonThrowable {
 	private String exception = null;

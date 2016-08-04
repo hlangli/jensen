@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 abstract class JsonRpcMessage {
 	private String jsonrpc = Jensen.JSONRPC;

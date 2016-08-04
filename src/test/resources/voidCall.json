@@ -1,7 +1,7 @@
 {
 	"jsonrpc": "2.0",
 	"id": 3,
-	"method": "dk.nineconsult.jensen.test.JensenTest.voidCall",
+	"method": "dk.langli.jensen.test.JensenTest.voidCall",
 	"params": [
 		{
 			"integer": 99,

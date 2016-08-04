@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen.test;
+package dk.langli.jensen.test;
 
 public class Object2 {
 	private String svend = "kurt";

@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen.test;
+package dk.langli.jensen.test;
 
 import org.joda.time.DateTime;
 

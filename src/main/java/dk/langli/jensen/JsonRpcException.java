@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 @SuppressWarnings("serial")
 public class JsonRpcException extends Exception {

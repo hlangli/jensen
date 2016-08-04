@@ -1,7 +1,7 @@
 {
 	"jsonrpc": "2.0",
 	"id": 5,
-	"method": "dk.nineconsult.jensen.test.UseJoda.getTheDate",
+	"method": "dk.langli.jensen.test.UseJoda.getTheDate",
 	"params": []
 }
 

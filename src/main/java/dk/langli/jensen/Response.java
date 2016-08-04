@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 public class Response extends JsonRpcMessage {
 	private Object result = null;
@@ -8,12 +8,12 @@ public class Response extends JsonRpcMessage {
 		super();
 	}
 
-	public Response(Integer id, Object result, Error error) {
-		super(id);
-		this.result = result;
-		this.error = error;
-	}
-	
+    public Response(Integer id, Object result, Error error) {
+        super(id);
+        this.result = result;
+        this.error = error;
+    }
+
 	public Object getResult() {
 		return result;
 	}

@@ -1,4 +1,4 @@
-package dk.nineconsult.jensen;
+package dk.langli.jensen;
 
 import java.io.IOException;
 import java.io.InputStream;

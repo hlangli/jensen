@@ -6,7 +6,7 @@ Jensen is a generic, reflection-based JSON-RPC bridge for java.  No configuratio
 
 <pre>{
 	"jsonrpc": "2.0",
-	"method": "dk.nineconsult.jensen.test.JensenTest.notification",
+	"method": "dk.langli.jensen.test.JensenTest.notification",
 	"params": [
 		{
 			"integer": 99,
