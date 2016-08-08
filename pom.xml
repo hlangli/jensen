@@ -2,17 +2,26 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.github.jinahya</groupId>
+		<artifactId>ossrh-parent</artifactId>
+		<version>0.8.2</version>
+	</parent>
 	<groupId>dk.langli</groupId>
 	<artifactId>jensen</artifactId>
-	<version>1.1.5</version>
+	<version>1.1.0</version>
 	<packaging>jar</packaging>
-	<name>Jensen JSON-RPC Java Bridge</name>
+	<name>Jensen</name>
+	<description>Jensen JSON-RPC Java Bridge</description>
+	<url>https://github.com/inzpektor/jensen</url>
 	<developers>
 		<developer>
 			<id>hsl</id>
 			<name>Henrik Stig Langli</name>
 			<email>henrik@langli.dk</email>
 			<timezone>+01:00</timezone>
+			<organization></organization>
+			<organizationUrl>https://github.com/inzpektor</organizationUrl>
 		</developer>
 	</developers>
 	<licenses>
@@ -21,6 +30,11 @@
 			<url>http://www.gnu.org/licenses/lgpl.txt</url>
 		</license>
 	</licenses>
+	<scm>
+		<connection>scm:git:git://github.com/inzpektor/jensen.git</connection>
+		<developerConnection>scm:git:ssh://github.com:inzpektor/jensen.git</developerConnection>
+		<url>https://github.com/inzpektor/jensen</url>
+	</scm>
 	<properties>
 		<maven.compiler.target>1.7</maven.compiler.target>
 		<maven.compiler.source>1.7</maven.compiler.source>
