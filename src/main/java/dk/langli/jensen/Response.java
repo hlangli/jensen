@@ -8,7 +8,7 @@ public class Response extends JsonRpcMessage {
 		super();
 	}
 
-    public Response(Integer id, Object result, Error error) {
+    public Response(Object id, Object result, Error error) {
         super(id);
         this.result = result;
         this.error = error;

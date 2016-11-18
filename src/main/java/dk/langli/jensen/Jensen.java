@@ -8,14 +8,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,7 +77,7 @@ public class Jensen {
     public void invoke(String jsonRequest, OutputStream out) {
         Response response = null;
         Request request = null;
-        Integer id = null;
+        Object id = null;
         try {
             request = mapper.readValue(jsonRequest, Request.class);
             id = request != null ? request.getId() : null;
@@ -225,6 +226,19 @@ public class Jensen {
             Class<?> clazz = Class.forName(className);
             methodCall = getMethodCall(clazz, methodName, requestParams);
         }
+        catch(MethodNotFoundException e) {
+            Map<String, Object> incompatibleMethods = new HashMap<>();
+            Map<String, Object> incompatibleMethodsConverted = new HashMap<>();
+            incompatibleMethods.put("incompatible", incompatibleMethodsConverted);
+            for(String method: e.getIncompatibleMethods().keySet()) {
+                ParameterTypeException parameterTypeException = e.getIncompatibleMethods().get(method);
+                Map<String, Object> data = new HashMap<>();
+                data.put("parameterType", parameterTypeException.getParameterType().getName());
+                data.put("index", parameterTypeException.getIndex());
+                incompatibleMethodsConverted.put(method, data);
+            }
+            throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(e, incompatibleMethods, request));
+        }
         catch(Throwable e) {
             throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(e, request));
         }
@@ -236,28 +250,33 @@ public class Jensen {
         return methodCall;
     }
 
-    private MethodCall getMethodCall(Class<?> clazz, String methodName, List<Object> requestParams) {
+    private MethodCall getMethodCall(Class<?> clazz, String methodName, List<Object> requestParams) throws MethodNotFoundException {
         MethodCall methodCall = null;
         Method[] methods = clazz.getMethods();
         int methodIndex = 0;
+        Map<String, ParameterTypeException> incompatibleMethods = new HashMap<>();
         while(methodCall == null && methodIndex < methods.length) {
             Method method = methods[methodIndex++];
+            String signature = method.getName() + "(" + toString(method.getParameterTypes()) + ")";
             if(method.getName().equals(methodName)) {
                 if(Modifier.isPublic(method.getModifiers())) {
                     log.trace("Check method parameter compatibility: " + method.getName() + "(" + toString(method.getParameterTypes()) + ")");
                     try {
                         List<Object> params = deserializeParameterList(requestParams, method.getParameterTypes());
                         if(params.size() == requestParams.size()) {
-                            log.trace(method.getName() + "(" + toString(method.getParameterTypes()) + ") is compatible with the parameter list");
+                            log.trace(signature+" is compatible with the parameter list");
                             methodCall = new MethodCall(method, params);
                         }
                     }
-                    catch(Throwable e) {
-                        log.error(method.getName() + "() does not match");
-                        // FIXME: Swallow and ignore - Bad coding practice.
+                    catch(ParameterTypeException e) {
+                        incompatibleMethods.put(signature, e);
                     }
                 }
             }
+        }
+        if(methodCall == null) {
+            String message = String.format("No method %s in class %s can take the given parameters", methodName, clazz.getSimpleName());
+            throw new MethodNotFoundException(message, incompatibleMethods);
         }
         return methodCall;
     }
@@ -271,12 +290,18 @@ public class Jensen {
         return parmTypes;
     }
 
-    private List<Object> deserializeParameterList(List<Object> params, Class<?>[] parameterTypes) throws JsonParseException, JsonMappingException, IOException {
+    private List<Object> deserializeParameterList(List<Object> params, Class<?>[] parameterTypes) throws ParameterTypeException {
         List<Object> deserializedparams = new ArrayList<Object>();
         if(params.size() == parameterTypes.length) {
             for(int i = 0; i < parameterTypes.length; i++) {
-                Object o = mapper.readValue(mapper.writeValueAsBytes(params.get(i)), parameterTypes[i]);
-                deserializedparams.add(o);
+                try {
+                    Object o = mapper.convertValue(params.get(i), parameterTypes[i]);
+                    deserializedparams.add(o);
+                }
+                catch(IllegalArgumentException e) {
+                    String message = String.format("Parameter[%s] is not a %s", i, parameterTypes[i].getSimpleName());
+                    throw new ParameterTypeException(message, parameterTypes[i], i);
+                }
             }
         }
         return deserializedparams;

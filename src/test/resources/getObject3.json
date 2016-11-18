@@ -1,0 +1,17 @@
+{
+	"jsonrpc": "2.0",
+	"id": 3,
+	"method": "dk.langli.jensen.test.JensenTest.getObject2",
+	"params": [
+		{
+			"integer": 99,
+			"string": 32,
+			"object2": {
+				"svend": "grethe",
+				"bent": "kurt"
+			}
+		},
+		42
+	]
+}
+

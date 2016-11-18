@@ -1,5 +1,7 @@
 package dk.langli.jensen;
 
+import java.util.Map;
+
 public enum JsonRpcError {
 	PARSE_ERROR(-32700, "Parse error"),
 	INVALID_REQUEST(-32600, "Invalid Request"),
@@ -17,10 +19,18 @@ public enum JsonRpcError {
 	}
 	
 	public Error toError(Request request) {
-		return toError(null, request);
+		return toError((Throwable) null, request);
 	}
 
-	public Error toError(Throwable e, Request request) {
-		return new Error(code, message, new JsonThrowable(e, request));
+    public Error toError(Map<String, Object> data, Request request) {
+        return new Error(code, message, data);
+    }
+
+    public Error toError(Throwable e, Request request) {
+        return toError(e, null, request);
+    }
+
+	public Error toError(Throwable e, Map<String, Object> data, Request request) {
+		return new Error(code, message, new JsonThrowable(e, data, request));
 	}
 }

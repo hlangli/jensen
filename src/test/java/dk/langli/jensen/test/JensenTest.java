@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
@@ -21,11 +23,12 @@ import dk.langli.jensen.DefaultSecurityFilter.MatchType;
 import dk.langli.jensen.Jensen;
 import dk.langli.jensen.JensenBuilder;
 import dk.langli.jensen.JsonRpcException;
+import dk.langli.jensen.Response;
 import dk.langli.jensen.ReturnValueHandler;
 
 public class JensenTest {
 	private Logger log = LoggerFactory.getLogger(JensenTest.class);
-
+	
 	public void voidCall(Object1 object1, int år) {
 		log.info(object1.getObject2().getSvend() + " er " + år + " år gammel");
 	}
@@ -39,13 +42,28 @@ public class JensenTest {
 	}
 
 	@Test
-	public void testNotification() {
+	public void testNotification() throws JsonParseException, JsonMappingException, IOException {
 		log.trace("testNotification()");
 		String jsonRequest = getResource("notification.json");
 		log.trace(jsonRequest);
-		String response = newJensenBuilder().build().invoke(jsonRequest);
-		assert response == null;
+		String responseStr = newJensenBuilder().build().invoke(jsonRequest);
+		assert responseStr != null;
+		ObjectMapper mapper = new ObjectMapper();
+		Response response = mapper.readValue(responseStr, Response.class);
+		Assert.assertTrue(response.getId() instanceof Number);
 	}
+
+    @Test
+    public void testNotificationWithStringId() throws JsonParseException, JsonMappingException, IOException {
+        log.trace("testNotificationWithStringId()");
+        String jsonRequest = getResource("notification-stringid.json");
+        log.trace(jsonRequest);
+        String responseStr = newJensenBuilder().build().invoke(jsonRequest);
+        assert responseStr != null;
+        ObjectMapper mapper = new ObjectMapper();
+        Response response = mapper.readValue(responseStr, Response.class);
+        Assert.assertTrue(response.getId() instanceof String);
+    }
 
 	@Test
 	public void testVoidCall() {
@@ -134,4 +152,14 @@ public class JensenTest {
 		}
 		return json;
 	}
+
+    @Test
+    public void testMethodIncompatibility() {
+        log.trace("testMethodIncompatibility()");
+        String jsonRequest = getResource("getObject3.json");
+        log.trace(jsonRequest);
+        String response = newJensenBuilder().build().invoke(jsonRequest);
+        //TODO: assert
+    }
+
 }

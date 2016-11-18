@@ -10,7 +10,7 @@ public class Request extends JsonRpcMessage {
 		super();
 	}
 
-	public Request(Integer id, String method, List<Object> params) {
+	public Request(Object id, String method, List<Object> params) {
 		super(id);
 		this.method = method;
 		this.params = params;

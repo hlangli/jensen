@@ -2,12 +2,12 @@ package dk.langli.jensen;
 
 abstract class JsonRpcMessage {
 	private String jsonrpc = Jensen.JSONRPC;
-	private Integer id = null;
+	private Object id = null;
 
 	public JsonRpcMessage() {
 	}
 
-	public JsonRpcMessage(Integer id) {
+	public JsonRpcMessage(Object id) {
 		this.id = id;
 	}
 
@@ -15,7 +15,7 @@ abstract class JsonRpcMessage {
 		return jsonrpc;
 	}
 
-	public Integer getId() {
+	public Object getId() {
 		return id;
 	}
 }
