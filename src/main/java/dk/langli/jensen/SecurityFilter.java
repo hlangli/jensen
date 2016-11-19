@@ -1,5 +1,5 @@
 package dk.langli.jensen;
 
 public interface SecurityFilter {
-    public boolean isAllowed(MethodCall methodCall, Request request);
+    public boolean isAllowed(Request request);
 }

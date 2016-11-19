@@ -13,7 +13,7 @@ public class DefaultSecurityFilter implements SecurityFilter {
     }
 
     @Override
-    public boolean isAllowed(MethodCall methodCall, Request request) {
+    public boolean isAllowed(Request request) {
         boolean allowed = true;
         if(allowMatches.length > 0) {
             allowed = false;
