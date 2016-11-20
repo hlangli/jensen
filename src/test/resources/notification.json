@@ -1,6 +1,5 @@
 {
 	"jsonrpc": "2.0",
-	"id": 1,
 	"method": "dk.langli.jensen.test.JensenTest.notification",
 	"params": [
 		{

@@ -1,5 +1,5 @@
 {
-  "jsonrpc" : "2.0",
-  "id" : 3,
-  "result" : "Return value changed to a string"
+	"jsonrpc" : "2.0",
+	"id" : 3,
+	"result" : "Return value changed to a string"
 }

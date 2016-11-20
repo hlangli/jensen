@@ -1,6 +1,6 @@
 {
 	"jsonrpc": "2.0",
-	"id": 3,
+	"id": 5,
 	"method": "dk.langli.jensen.test.JensenTest.voidCall",
 	"params": [
 		{

@@ -78,7 +78,7 @@ public class Jensen {
 	}
 
 	public void invoke(String jsonRequest, OutputStream out) {
-		Response response = null;
+		JsonRpcResponse response = null;
 		Request request = null;
 		Object id = null;
 		try {
@@ -96,10 +96,7 @@ public class Jensen {
 						if(returnValueHandler != null) {
 							result = returnValueHandler.onReturnValue(result);
 						}
-						response = new Response(id, result, null);
-						if(responseHandler != null) {
-							response = responseHandler.onResponse(response);
-						}
+						response = new JsonRpcResponse(id, result, null);
 					}
 				}
 				else {
@@ -111,37 +108,43 @@ public class Jensen {
 			}
 		}
 		catch(JsonRpcException e) {
-			response = new Response(id, null, e.getError());
+			response = new JsonRpcResponse(id, null, e.getError());
 		}
 		catch(MethodNotFoundException e) {
-			response = new Response(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, e.getIncompatibleMethods(), request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, e.getIncompatibleMethods(), request));
 		}
 		catch(ClassNotFoundException e) {
-			response = new Response(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, request));
 		}
 		catch(JsonMappingException | JsonParseException e) {
-			response = new Response(id, null, JsonRpcError.PARSE_ERROR.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.PARSE_ERROR.toError(e, request));
 		}
 		catch(IOException e) {
-			response = new Response(id, null, JsonRpcError.SERVER_ERROR.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request));
 		}
 		if(id != null || request == null) {
 			try {
-				mapper.writeValue(out, response);
+				if(responseHandler != null) {
+					response = responseHandler.onResponse(response);
+				}
+				write(response, out);
 			}
 			catch(JsonGenerationException e) {
-				tryWrite(new Response(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
 			}
 			catch(JsonMappingException e) {
-				tryWrite(new Response(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
 			}
 			catch(IOException e) {
-				tryWrite(new Response(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
+			}
+			catch(JsonRpcException e) {
+				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request)), out);
 			}
 		}
 	}
 
-	private void tryWrite(Response response, OutputStream out) {
+	private void tryWrite(JsonRpcResponse response, OutputStream out) {
 		try {
 			write(response, out);
 		}
@@ -156,7 +159,7 @@ public class Jensen {
 		}
 	}
 
-	private void write(Response response, OutputStream out) throws JsonGenerationException, JsonMappingException, IOException {
+	private void write(JsonRpcResponse response, OutputStream out) throws JsonGenerationException, JsonMappingException, IOException {
 		ObjectWriter writer = mapper.writer();
 		if(prettyPrinter != null) {
 			writer = writer.with(prettyPrinter);

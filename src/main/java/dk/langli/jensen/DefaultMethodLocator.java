@@ -71,7 +71,12 @@ public class DefaultMethodLocator implements MethodLocator {
 		}
 		if(methodCall == null) {
 			String message = String.format("No method %s in class %s can take the given parameters", methodName, clazz.getSimpleName());
-			throw new MethodNotFoundException(message, incompatibleMethods);
+			Map<String, Object> incompatible = null;
+			if(incompatibleMethods.size() > 0) {
+				incompatible = new HashMap<>();
+				incompatible.put("incompatible", incompatibleMethods);
+			}
+			throw new MethodNotFoundException(message, incompatible);
 		}
 		return methodCall;
 	}

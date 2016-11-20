@@ -4,13 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,7 +23,8 @@ import dk.langli.jensen.DefaultSecurityFilter.MatchType;
 import dk.langli.jensen.Jensen;
 import dk.langli.jensen.JensenBuilder;
 import dk.langli.jensen.JsonRpcException;
-import dk.langli.jensen.Response;
+import dk.langli.jensen.JsonRpcResponse;
+import dk.langli.jensen.MethodNotFoundException;
 import dk.langli.jensen.ReturnValueHandler;
 
 public class JensenTest {
@@ -45,10 +46,7 @@ public class JensenTest {
 	public void testNotification() throws JsonParseException, JsonMappingException, IOException {
 		String jsonRequest = getResource("notification.json");
 		String responseStr = newJensenBuilder().build().invoke(jsonRequest);
-		Assert.assertNotNull(responseStr);
-		ObjectMapper mapper = new ObjectMapper();
-		Response response = mapper.readValue(responseStr, Response.class);
-		Assert.assertTrue(response.getId() instanceof Number);
+		Assert.assertNull(responseStr);
 	}
 
 	@Test
@@ -57,7 +55,7 @@ public class JensenTest {
 		String responseStr = newJensenBuilder().build().invoke(jsonRequest);
 		Assert.assertNotNull(responseStr);
 		ObjectMapper mapper = new ObjectMapper();
-		Response response = mapper.readValue(responseStr, Response.class);
+		JsonRpcResponse response = mapper.readValue(responseStr, JsonRpcResponse.class);
 		Assert.assertTrue(response.getId() instanceof String);
 	}
 
@@ -66,7 +64,7 @@ public class JensenTest {
 		String jsonRequest = getResource("voidCall.json");
 		String response = newJensenBuilder().build().invoke(jsonRequest);
 		String expected = getResource("voidCall-response.json");
-		Assert.assertEquals(response.trim(), expected.trim());
+		Assert.assertEquals(expected.trim(), response.trim());
 	}
 
 	@Test
@@ -102,8 +100,6 @@ public class JensenTest {
 
 	private JensenBuilder newJensenBuilder() {
 		ObjectMapper mapper = new ObjectMapper();
-		mapper.setSerializationInclusion(Include.NON_NULL);
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
 		mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		return new JensenBuilder().withObjectMapper(mapper).withPrettyPrinter(new DefaultPrettyPrinter());
 	}
@@ -137,11 +133,20 @@ public class JensenTest {
 		return json;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
-	public void testMethodIncompatibility() {
+	public void testMethodIncompatibility() throws JsonParseException, JsonMappingException, IOException {
 		String jsonRequest = getResource("getObject3.json");
-		String response = newJensenBuilder().build().invoke(jsonRequest);
-//		Assert.assertEquals(expected.trim(), response.trim());
+		String responseStr = newJensenBuilder().build().invoke(jsonRequest);
+		ObjectMapper mapper = new ObjectMapper();
+		JsonRpcResponse response = mapper.readValue(responseStr, JsonRpcResponse.class);
+		Assert.assertEquals("Method not found", response.getError().getMessage());
+		Map<String, Object> data = mapper.convertValue(response.getError().getData(), Map.class);
+		Assert.assertEquals(MethodNotFoundException.class.getName(), data.get("exception"));
+		Map<String, Object> incompatible = mapper.convertValue(data.get("incompatible"), Map.class);
+		Map<String, Object> getObject2 = mapper.convertValue(incompatible.get("getObject2(Object1, int)"), Map.class);
+		Assert.assertEquals(Object1.class.getName(), getObject2.get("parameterType"));
+		Assert.assertEquals(0, getObject2.get("index"));
 	}
 
 }

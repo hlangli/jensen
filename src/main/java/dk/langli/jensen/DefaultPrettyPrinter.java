@@ -18,7 +18,8 @@ public class DefaultPrettyPrinter implements PrettyPrinter {
     public DefaultPrettyPrinter(String indentation) {
         prettyPrinter = new com.fasterxml.jackson.core.util.DefaultPrettyPrinter();
         Indenter indenter = new DefaultIndenter(indentation, DefaultIndenter.SYS_LF);
-        prettyPrinter.indentObjectsWith(indenter);
+        prettyPrinter = prettyPrinter.withObjectIndenter(indenter);
+        prettyPrinter = prettyPrinter.withArrayIndenter(indenter);
     }
 
     @Override
