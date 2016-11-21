@@ -50,16 +50,6 @@ public class JensenTest {
 	}
 
 	@Test
-	public void testNotificationWithStringId() throws JsonParseException, JsonMappingException, IOException {
-		String jsonRequest = getResource("notification-stringid.json");
-		String responseStr = newJensenBuilder().build().invoke(jsonRequest);
-		Assert.assertNotNull(responseStr);
-		ObjectMapper mapper = new ObjectMapper();
-		JsonRpcResponse response = mapper.readValue(responseStr, JsonRpcResponse.class);
-		Assert.assertTrue(response.getId() instanceof String);
-	}
-
-	@Test
 	public void testVoidCall() {
 		String jsonRequest = getResource("voidCall.json");
 		String response = newJensenBuilder().build().invoke(jsonRequest);
