@@ -1,5 +1,7 @@
 package dk.langli.jensen.test;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.UUID;
 
 import org.junit.Assert;
@@ -31,9 +33,11 @@ public class JsonRpcRoundtripTest {
     @Test
     public void testRoundtrip() throws Exception {
         JsonRpcBroker broker = new JsonRpcBrokerBuilder().build();
-        JsonRpcHttpServer server = new JsonRpcHttpServer(broker);
+        String loopbackAddress = InetAddress.getLoopbackAddress().getHostAddress();
+        InetSocketAddress address = new InetSocketAddress(loopbackAddress, 0);
+        JsonRpcHttpServer server = new JsonRpcHttpServer(broker, address);
         server.start();
-        HttpTransport transport = new HttpTransport(String.format("http://localhost:%s/", server.getPort()));
+        HttpTransport transport = new HttpTransport(String.format("http://%s:%s/", loopbackAddress, server.getPort()));
         JsonRpcCaller caller = new JsonRpcCallerBuilder().withTransport(transport).build();
         String uuid = UUID.randomUUID().toString();
         Object result = caller.callThis(uuid);
