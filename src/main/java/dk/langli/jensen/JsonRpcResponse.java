@@ -3,6 +3,8 @@ package dk.langli.jensen;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+import dk.langli.jensen.broker.Error;
+
 public class JsonRpcResponse extends JsonRpcMessage {
 	@JsonInclude(Include.NON_NULL)
 	private Error error = null;

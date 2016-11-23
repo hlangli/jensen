@@ -4,13 +4,13 @@ import java.util.List;
 
 public class Request extends JsonRpcMessage {
 	private String method = null;
-	private List<Object> params = null;
+	private List<? extends Object> params = null;
 	
 	public Request() {
 		super();
 	}
 
-	public Request(Object id, String method, List<Object> params) {
+	public Request(Object id, String method, List<? extends Object> params) {
 		super(id);
 		this.method = method;
 		this.params = params;
@@ -20,7 +20,7 @@ public class Request extends JsonRpcMessage {
 		return method;
 	}
 
-	public List<Object> getParams() {
+	public List<? extends Object> getParams() {
 		return params;
 	}
 }

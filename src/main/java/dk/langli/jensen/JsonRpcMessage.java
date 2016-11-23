@@ -1,7 +1,9 @@
 package dk.langli.jensen;
 
+import dk.langli.jensen.broker.JsonRpcBroker;
+
 abstract class JsonRpcMessage {
-	private String jsonrpc = Jensen.JSONRPC;
+	private String jsonrpc = JsonRpcBroker.JSONRPC;
 	private Object id = null;
 
 	public JsonRpcMessage() {
