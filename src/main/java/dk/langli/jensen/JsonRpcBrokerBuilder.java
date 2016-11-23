@@ -16,7 +16,7 @@ import dk.langli.jensen.broker.SecurityFilter;
  * 
  * @author Rune Molin, rmo@nineconsult.dk
  */
-public class JsonBrokerBuilder {
+public class JsonRpcBrokerBuilder {
 	private ObjectMapper objectMapper = null;
 	private SecurityFilter securityFilter = null;
 	private PrettyPrinter prettyPrinter = null;
@@ -26,49 +26,49 @@ public class JsonBrokerBuilder {
 	private InstanceLocator instanceLocator = null;
 	private MethodLocator methodLocator = null;
 
-	public JsonBrokerBuilder() {
+	public JsonRpcBrokerBuilder() {
 	}
 	
 	public JsonRpcBroker build() {
 		return new JsonRpcBroker(this);
 	}
 
-	public JsonBrokerBuilder withMethodLocator(MethodLocator methodLocator) {
+	public JsonRpcBrokerBuilder withMethodLocator(MethodLocator methodLocator) {
 		this.methodLocator = methodLocator;
 		return this;
 	}
 
-	public JsonBrokerBuilder withInstanceLocator(InstanceLocator instanceLocator) {
+	public JsonRpcBrokerBuilder withInstanceLocator(InstanceLocator instanceLocator) {
 		this.instanceLocator = instanceLocator;
 		return this;
 	}
 
-	public JsonBrokerBuilder withInvocationIntercepter(InvocationIntercepter invocationIntercepter) {
+	public JsonRpcBrokerBuilder withInvocationIntercepter(InvocationIntercepter invocationIntercepter) {
 		this.invocationIntercepter = invocationIntercepter;
 		return this;
 	}
 
-	public JsonBrokerBuilder withResponseHandler(ResponseHandler responseHandler) {
+	public JsonRpcBrokerBuilder withResponseHandler(ResponseHandler responseHandler) {
 		this.responseHandler = responseHandler;
 		return this;
 	}
 
-	public JsonBrokerBuilder withReturnValueHandler(ReturnValueHandler returnValueHandler) {
+	public JsonRpcBrokerBuilder withReturnValueHandler(ReturnValueHandler returnValueHandler) {
 		this.returnValueHandler = returnValueHandler;
 		return this;
 	}
 
-	public JsonBrokerBuilder withObjectMapper(ObjectMapper objectMapper) {
+	public JsonRpcBrokerBuilder withObjectMapper(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
 		return this;
 	}
 
-	public JsonBrokerBuilder withSecurityFilter(SecurityFilter securityFilter) {
+	public JsonRpcBrokerBuilder withSecurityFilter(SecurityFilter securityFilter) {
 		this.securityFilter = securityFilter;
 		return this;
 	}
 
-	public JsonBrokerBuilder withPrettyPrinter(PrettyPrinter prettyPrinter) {
+	public JsonRpcBrokerBuilder withPrettyPrinter(PrettyPrinter prettyPrinter) {
 		this.prettyPrinter = prettyPrinter;
 		return this;
 	}

@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
-import dk.langli.jensen.JsonBrokerBuilder;
+import dk.langli.jensen.JsonRpcBrokerBuilder;
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
 
@@ -36,7 +36,7 @@ public class JsonRpcBroker {
 	private final PrettyPrinter prettyPrinter;
 	private final SecurityFilter securityFilter;
 
-	public JsonRpcBroker(JsonBrokerBuilder builder) {
+	public JsonRpcBroker(JsonRpcBrokerBuilder builder) {
 		mapper = builder.getObjectMapper() != null ? builder.getObjectMapper() : new ObjectMapper();
 		returnValueHandler = builder.getReturnValueHandler();
 		responseHandler = builder.getResponseHandler();

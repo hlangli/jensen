@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 
-import dk.langli.jensen.JsonBrokerBuilder;
+import dk.langli.jensen.JsonRpcBrokerBuilder;
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
 import dk.langli.jensen.broker.DefaultSecurityFilter;
@@ -118,16 +118,16 @@ public class JsonRpcBrokerTest {
         Assert.assertTrue("Expected SecurityException", response.contains("java.lang.SecurityException"));
     }
 
-    private JsonBrokerBuilder newJensenBuilder() {
+    private JsonRpcBrokerBuilder newJensenBuilder() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-        return new JsonBrokerBuilder().withObjectMapper(mapper);
+        return new JsonRpcBrokerBuilder().withObjectMapper(mapper);
     }
 
     /* @formatter:off */
     @Test
     public void testJodaModule() throws JsonProcessingException {
-        JsonBrokerBuilder builder = newJensenBuilder();
+        JsonRpcBrokerBuilder builder = newJensenBuilder();
         builder = builder.withObjectMapper(new ObjectMapper());
         builder.getObjectMapper().registerModule(new JodaModule());
         builder.getObjectMapper().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

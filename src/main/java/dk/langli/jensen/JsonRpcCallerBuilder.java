@@ -1,7 +1,10 @@
-package dk.langli.jensen.caller;
+package dk.langli.jensen;
 
 import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dk.langli.jensen.caller.JsonRpcCaller;
+import dk.langli.jensen.caller.Transport;
 
 public class JsonRpcCallerBuilder {
 	private ObjectMapper objectMapper = null;

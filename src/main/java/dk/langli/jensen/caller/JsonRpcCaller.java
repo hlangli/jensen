@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
+import dk.langli.jensen.JsonRpcCallerBuilder;
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
 
@@ -32,7 +33,10 @@ public class JsonRpcCaller {
         if(params == null) {
             params = new Object[0];
         }
-        Integer id = nextId();
+        Integer id = null;
+        if(returnType.getTypeName().equals("void")) {
+            id = nextId();
+        }
         Request request = new Request(id, method, Arrays.asList(params));
         try {
             String requestJson = objectMapper.writeValueAsString(request);
@@ -43,8 +47,10 @@ public class JsonRpcCaller {
                 throw e;
             }
             else {
-                JavaType typeReference = TypeFactory.defaultInstance().constructType(returnType);
-                returnValue = objectMapper.convertValue(response.getResult(), typeReference);
+                if(id != null) {
+                    JavaType typeReference = TypeFactory.defaultInstance().constructType(returnType);
+                    returnValue = objectMapper.convertValue(response.getResult(), typeReference);
+                }
             }
         }
         catch(JsonRpcException e) {
@@ -78,6 +84,10 @@ public class JsonRpcCaller {
         synchronized(idSeq) {
             idSeq.remove(id);
         }
+    }
+
+    public <T> T callThis(Object... params) throws JsonRpcException, TransportException {
+        return call(2, params);
     }
 
     @SuppressWarnings("unchecked")
