@@ -33,15 +33,20 @@ public class JsonRpcHttpServer {
     public JsonRpcHttpServer(JsonRpcBroker broker, InetSocketAddress address) {
         this.broker = broker;
         server = new Server(address);
+        initHandler();
     }
     
-    public void start() throws Exception {
+    private void initHandler() {
         server.setHandler(new AbstractHandler() {
             @Override
             public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
                 broker.invoke(request.getInputStream(), response.getOutputStream());
+                response.getOutputStream().close();
             }
         });
+    }
+    
+    public void start() throws Exception {
         server.start();
     }
     

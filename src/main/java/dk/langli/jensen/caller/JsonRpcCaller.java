@@ -10,6 +10,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
@@ -34,22 +35,24 @@ public class JsonRpcCaller {
             params = new Object[0];
         }
         Integer id = null;
-        if(returnType.getTypeName().equals("void")) {
+        if(!returnType.getTypeName().equals("void")) {
             id = nextId();
         }
         Request request = new Request(id, method, Arrays.asList(params));
         try {
             String requestJson = objectMapper.writeValueAsString(request);
             String responseJson = transport.send(requestJson);
-            JsonRpcResponse response = objectMapper.readValue(responseJson, JsonRpcResponse.class);
-            if(response.getError() != null) {
-                JsonRpcException e = objectMapper.convertValue(response.getError().getData(), JsonRpcException.class);
-                throw e;
-            }
-            else {
-                if(id != null) {
-                    JavaType typeReference = TypeFactory.defaultInstance().constructType(returnType);
-                    returnValue = objectMapper.convertValue(response.getResult(), typeReference);
+            if(responseJson != null) {
+                JsonRpcResponse response = objectMapper.readValue(responseJson, JsonRpcResponse.class);
+                if(response.getError() != null) {
+                    JsonRpcException e = objectMapper.convertValue(response.getError().getData(), JsonRpcException.class);
+                    throw e;
+                }
+                else {
+                    if(id != null) {
+                        JavaType typeReference = TypeFactory.defaultInstance().constructType(returnType);
+                        returnValue = objectMapper.convertValue(response.getResult(), typeReference);
+                    }
                 }
             }
         }
@@ -59,11 +62,18 @@ public class JsonRpcCaller {
         catch(TransportException e) {
             throw e;
         }
+        catch(JsonMappingException e) {
+            if(id != null) {
+                throw new JsonRpcException(e);
+            }
+        }
         catch(Exception e) {
             throw new JsonRpcException(e);
         }
         finally {
-            removeId(id);
+            if(id != null) {
+                removeId(id);
+            }
         }
         return returnValue;
     }
