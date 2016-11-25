@@ -3,27 +3,32 @@ package dk.langli.jensen.caller;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import dk.langli.jensen.Request;
 
 public class JsonRpcException extends Exception {
     private static final long serialVersionUID = -218203140871694687L;
     private String exception = null;
-    private String message = null;
-    private StackTraceElement[] stackTrace = null;
-    private JsonRpcException cause = null;
     private Request request = null;
     
     public JsonRpcException() {
+    	System.out.println("New JsonRpcException");
     }
 
-    public JsonRpcException(Throwable e) {
+    public JsonRpcException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public JsonRpcException(String message) {
+		super(message);
+	}
+
+	@JsonIgnore
+    protected JsonRpcException(Throwable e) {
         super(e.getMessage(), e.getCause());
         setException(e.getClass().getName());
-        setMessage(e.getMessage());
         setStackTrace(e.getStackTrace());
-        if(e.getCause() != null) {
-            setCause(new JsonRpcException(e.getCause()));
-        }
     }
 
     public String getException() {
@@ -34,24 +39,12 @@ public class JsonRpcException extends Exception {
         this.exception = exception;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public StackTraceElement[] getStackTrace() {
-        return stackTrace;
-    }
-
     public void setStackTrace(String[] stackTrace) {
         List<StackTraceElement> stackTraceProper = new ArrayList<>();
         for(String stackTraceElement: stackTrace) {
             stackTraceProper.add(toStackTraceElement(stackTraceElement));
         }
-        this.stackTrace = stackTraceProper.toArray(new StackTraceElement[stackTraceProper.size()]);
+        super.setStackTrace(stackTraceProper.toArray(new StackTraceElement[stackTraceProper.size()]));
     }
     
     private StackTraceElement toStackTraceElement(String stackTraceElementStr) {
@@ -71,19 +64,18 @@ public class JsonRpcException extends Exception {
         return new StackTraceElement(declaringClass, methodName, fileName, lineNumber);
     }
 
-    public JsonRpcException getCause() {
-        return cause;
-    }
-
-    public void setCause(JsonRpcException cause) {
-        this.cause = cause;
-    }
-
     public Request getRequest() {
         return request;
     }
 
     public void setRequest(Request request) {
         this.request = request;
+    }
+    
+    @Override
+    public String toString() {
+        String s = exception;
+        String message = getLocalizedMessage();
+        return (message != null) ? (s + ": " + message) : s;
     }
 }

@@ -2,20 +2,21 @@ package dk.langli.jensen.broker;
 
 @SuppressWarnings("serial")
 public class ParameterTypeException extends Exception {
-	private final Class<?> parameterType;
-	private final int index;
+	private final IncompatibleParameter incompatibleParameter;
     
     public ParameterTypeException(String message, Class<?> parameterType, int index) {
         super(message);
-        this.parameterType = parameterType;
-		this.index = index;
-	}
-
-    public Class<?> getParameterType() {
-        return parameterType;
+        incompatibleParameter = new IncompatibleParameter();
+        incompatibleParameter.setParameterType(parameterType);
+        incompatibleParameter.setIndex(index);
     }
 
-    public int getIndex() {
-        return index;
+    public ParameterTypeException(String message, IncompatibleParameter incompatibleParameter) {
+        super(message);
+        this.incompatibleParameter = incompatibleParameter;
+	}
+
+    public IncompatibleParameter getIncompatibleParameter() {
+        return incompatibleParameter;
     }
 }

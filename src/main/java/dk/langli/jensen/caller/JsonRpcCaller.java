@@ -12,9 +12,9 @@ import java.util.TreeSet;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
-import dk.langli.jensen.JsonRpcCallerBuilder;
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
 
@@ -23,10 +23,17 @@ public class JsonRpcCaller {
     private final SortedSet<Integer> idSeq;
     private final ObjectMapper objectMapper;
     
+    public static JsonRpcCallerBuilder builder() {
+        return new JsonRpcCallerBuilder();
+    }
+    
     public JsonRpcCaller(JsonRpcCallerBuilder builder) {
         idSeq = new TreeSet<>();
         transport = builder.getTransport();
         objectMapper = builder.getObjectMapper() != null ? builder.getObjectMapper() : new ObjectMapper();
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(JsonRpcException.class, new JsonRpcExceptionDeserializer(objectMapper));
+        objectMapper.registerModule(module);
     }
     
     public <T> T call(String method, Type returnType, Object... params) throws JsonRpcException, TransportException {
@@ -34,10 +41,7 @@ public class JsonRpcCaller {
         if(params == null) {
             params = new Object[0];
         }
-        Integer id = null;
-        if(!returnType.getTypeName().equals("void")) {
-            id = nextId();
-        }
+        Integer id = nextId();
         Request request = new Request(id, method, Arrays.asList(params));
         try {
             String requestJson = objectMapper.writeValueAsString(request);
@@ -45,11 +49,12 @@ public class JsonRpcCaller {
             if(responseJson != null) {
                 JsonRpcResponse response = objectMapper.readValue(responseJson, JsonRpcResponse.class);
                 if(response.getError() != null) {
-                    JsonRpcException e = objectMapper.convertValue(response.getError().getData(), JsonRpcException.class);
+                	Object data = response.getError().getData();
+                    JsonRpcException e = objectMapper.convertValue(data, JsonRpcException.class);
                     throw e;
                 }
                 else {
-                    if(id != null) {
+                    if(returnType != null && !returnType.getTypeName().equals("void")) {
                         JavaType typeReference = TypeFactory.defaultInstance().constructType(returnType);
                         returnValue = objectMapper.convertValue(response.getResult(), typeReference);
                     }
@@ -63,9 +68,7 @@ public class JsonRpcCaller {
             throw e;
         }
         catch(JsonMappingException e) {
-            if(id != null) {
-                throw new JsonRpcException(e);
-            }
+            throw new JsonRpcException(e);
         }
         catch(Exception e) {
             throw new JsonRpcException(e);

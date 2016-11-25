@@ -19,12 +19,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 
-import dk.langli.jensen.JsonRpcBrokerBuilder;
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
 import dk.langli.jensen.broker.DefaultSecurityFilter;
 import dk.langli.jensen.broker.DefaultSecurityFilter.MatchType;
 import dk.langli.jensen.broker.JsonRpcBroker;
+import dk.langli.jensen.broker.JsonRpcBrokerBuilder;
 import dk.langli.jensen.broker.JsonRpcException;
 import dk.langli.jensen.broker.MethodNotFoundException;
 import dk.langli.jensen.broker.ReturnValueHandler;
@@ -121,7 +121,7 @@ public class JsonRpcBrokerTest {
     private JsonRpcBrokerBuilder newJensenBuilder() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-        return new JsonRpcBrokerBuilder().withObjectMapper(mapper);
+        return JsonRpcBroker.builder().withObjectMapper(mapper);
     }
 
     /* @formatter:off */

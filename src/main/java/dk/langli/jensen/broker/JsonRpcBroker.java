@@ -7,7 +7,9 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -20,7 +22,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
-import dk.langli.jensen.JsonRpcBrokerBuilder;
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
 
@@ -35,6 +36,10 @@ public class JsonRpcBroker {
 	private final InstanceLocator instanceLocator;
 	private final PrettyPrinter prettyPrinter;
 	private final SecurityFilter securityFilter;
+	
+	public static JsonRpcBrokerBuilder builder() {
+	    return new JsonRpcBrokerBuilder();
+	}
 
 	public JsonRpcBroker(JsonRpcBrokerBuilder builder) {
 		mapper = builder.getObjectMapper() != null ? builder.getObjectMapper() : new ObjectMapper();
@@ -98,7 +103,12 @@ public class JsonRpcBroker {
 			response = new JsonRpcResponse(id, null, e.getError());
 		}
 		catch(MethodNotFoundException e) {
-			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, e.getIncompatibleMethods(), request));
+			Map<String, Object> incompatible = null;
+			if(e.getIncompatibleMethods() != null && e.getIncompatibleMethods().size() > 0) {
+				incompatible = new HashMap<>();
+				incompatible.put("incompatible", e.getIncompatibleMethods());
+			}
+			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, incompatible, request));
 		}
 		catch(ClassNotFoundException e) {
 			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, request));

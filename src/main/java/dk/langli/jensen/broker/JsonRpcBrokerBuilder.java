@@ -1,15 +1,7 @@
-package dk.langli.jensen;
+package dk.langli.jensen.broker;
 
 import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import dk.langli.jensen.broker.InstanceLocator;
-import dk.langli.jensen.broker.InvocationIntercepter;
-import dk.langli.jensen.broker.JsonRpcBroker;
-import dk.langli.jensen.broker.MethodLocator;
-import dk.langli.jensen.broker.ResponseHandler;
-import dk.langli.jensen.broker.ReturnValueHandler;
-import dk.langli.jensen.broker.SecurityFilter;
 
 /**
  * Build a Jensen feature with specific features
@@ -26,7 +18,7 @@ public class JsonRpcBrokerBuilder {
 	private InstanceLocator instanceLocator = null;
 	private MethodLocator methodLocator = null;
 
-	public JsonRpcBrokerBuilder() {
+	protected JsonRpcBrokerBuilder() {
 	}
 	
 	public JsonRpcBroker build() {

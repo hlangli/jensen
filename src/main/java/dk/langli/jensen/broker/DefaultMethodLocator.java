@@ -48,7 +48,7 @@ public class DefaultMethodLocator implements MethodLocator {
 		MethodCall methodCall = null;
 		Method[] methods = clazz.getMethods();
 		int methodIndex = 0;
-		Map<String, Object> incompatibleMethods = new HashMap<>();
+		Map<String, IncompatibleParameter> incompatibleMethods = new HashMap<>();
 		while(methodCall == null && methodIndex < methods.length) {
 			Method method = methods[methodIndex++];
 			String signature = method.getName() + "(" + toString(method.getParameterTypes()) + ")";
@@ -63,22 +63,14 @@ public class DefaultMethodLocator implements MethodLocator {
 						}
 					}
 					catch(ParameterTypeException e) {
-						Map<String, Object> parameterInfo = new HashMap<>();
-						parameterInfo.put("parameterType", e.getParameterType());
-						parameterInfo.put("index", e.getIndex());
-						incompatibleMethods.put(signature, parameterInfo);
+						incompatibleMethods.put(signature, e.getIncompatibleParameter());
 					}
 				}
 			}
 		}
 		if(methodCall == null) {
 			String message = String.format("No method %s in class %s can take the given parameters", methodName, clazz.getSimpleName());
-			Map<String, Object> incompatible = null;
-			if(incompatibleMethods.size() > 0) {
-				incompatible = new HashMap<>();
-				incompatible.put("incompatible", incompatibleMethods);
-			}
-			throw new MethodNotFoundException(message, incompatible);
+			throw new MethodNotFoundException(message, incompatibleMethods);
 		}
 		return methodCall;
 	}
