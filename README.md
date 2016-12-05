@@ -1,8 +1,19 @@
 jensen
 ======
+
 <small>Jensen JSON-RPC Java Bridge</small>
 
-Jensen is a generic, reflection-based JSON-RPC bridge for java.  No configuration is needed.  Any method in any class with a no-args constructor can be called via JSON-RPC by specifying the fully qualified classname along with the method name in the "method" property of the json-rpc request, like so:
+Jensen is a reflection-based JSON-RPC broker and caller for java.  It is highly configurable with support for any compatible transport protocol.
+
+## Broker
+The broker is the API for invoking methods from a JSON-RPC request.
+
+### Configuration
+A JsonRpcBroker instance is obtained from a J
+
+
+## Caller
+The caller is the API for creating and sending JSON-RPC requests.
 
 <pre>{
 	"jsonrpc": "2.0",
