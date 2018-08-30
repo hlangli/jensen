@@ -2,6 +2,7 @@ package dk.langli.jensen.broker;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dk.langli.jensen.Request;
+import ru.vyarus.java.generics.resolver.GenericsResolver;
 
 public class DefaultMethodLocator implements MethodLocator {
 	private final Logger log = LoggerFactory.getLogger(DefaultMethodLocator.class);
@@ -55,12 +57,13 @@ public class DefaultMethodLocator implements MethodLocator {
 		Map<String, IncompatibleParameter> incompatibleMethods = new HashMap<>();
 		while(methodCall == null && methodIndex < methods.size()) {
 			Method method = methods.get(methodIndex++);
-			String signature = method.getName() + "(" + toString(method.getParameterTypes()) + ")";
+			String signature = method.getName() + "(" + toString(Arrays.asList(method.getGenericParameterTypes())) + ")";
 			if(method.getName().equals(methodName)) {
 				if(Modifier.isPublic(method.getModifiers())) {
-					log.trace("Check method parameter compatibility: " + method.getName() + "(" + toString(method.getParameterTypes()) + ")");
+					List<Class<?>> parameterTypes = getParameterTypes(clazz, method);
+					log.trace("Check method parameter compatibility: " + method.getName() + "(" + toString(parameterTypes) + ")");
 					try {
-						List<? extends Object> params = deserializeParameterList(requestParams, method.getParameterTypes());
+						List<? extends Object> params = deserializeParameterList(requestParams, parameterTypes);
 						if(requestParams == null && params.size() == 0 || params.size() == requestParams.size()) {
 							log.trace(signature + " is compatible with the parameter list");
 							methodCall = new MethodCall(clazz, method, params);
@@ -79,26 +82,33 @@ public class DefaultMethodLocator implements MethodLocator {
 		return methodCall;
 	}
 
-	private String toString(Class<?>[] parameterTypes) {
+	private List<Class<?>> getParameterTypes(Class<?> clazz, Method method) {
+		return GenericsResolver
+				.resolve(clazz)
+				.method(method)
+				.resolveParameters();
+	}
+
+	private String toString(List<? extends Type> parameterTypes) {
 		String parmTypes = "";
-		for(int i = 0; parameterTypes != null && i < parameterTypes.length; i++) {
-			Class<?> type = parameterTypes[i];
-			parmTypes += (i != 0 ? ", " : "") + type.getSimpleName();
+		for(int i = 0; parameterTypes != null && i < parameterTypes.size(); i++) {
+			Type type = parameterTypes.get(i);
+			parmTypes += (i != 0 ? ", " : "") + (type instanceof Class<?> ? ((Class<?>) type).getSimpleName() : type.getTypeName());
 		}
 		return parmTypes;
 	}
 
-	private List<Object> deserializeParameterList(List<? extends Object> params, Class<?>[] parameterTypes) throws ParameterTypeException {
+	private List<Object> deserializeParameterList(List<? extends Object> params, List<Class<?>> parameterTypes) throws ParameterTypeException {
 		List<Object> deserializedparams = new ArrayList<Object>();
-		if(params != null && params.size() == parameterTypes.length) {
-			for(int i = 0; i < parameterTypes.length; i++) {
+		if(params != null && params.size() == parameterTypes.size()) {
+			for(int i = 0; i < parameterTypes.size(); i++) {
 				try {
-					Object o = mapper.convertValue(params.get(i), parameterTypes[i]);
+					Object o = mapper.convertValue(params.get(i), parameterTypes.get(i));
 					deserializedparams.add(o);
 				}
 				catch(IllegalArgumentException e) {
-					String message = String.format("Parameter[%s] is not a %s", i, parameterTypes[i].getSimpleName());
-					throw new ParameterTypeException(message, parameterTypes[i], i);
+					String message = String.format("Parameter[%s] is not a %s", i, parameterTypes.get(i).getSimpleName());
+					throw new ParameterTypeException(message, parameterTypes.get(i), i);
 				}
 			}
 		}

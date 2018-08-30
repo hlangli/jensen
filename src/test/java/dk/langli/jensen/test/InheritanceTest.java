@@ -3,6 +3,7 @@ package dk.langli.jensen.test;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -24,14 +25,12 @@ public class InheritanceTest {
 	@Test
 	public void testInheritedMethod() throws JsonParseException, JsonMappingException, IOException {
 		ObjectMapper mapper = new ObjectMapper();
-		JsonRpcBroker broker = newJensenBuilder()
-				.withPrettyPrinter(new DefaultPrettyPrinter())
-				.build();
+		JsonRpcBroker broker = newJensenBuilder().withPrettyPrinter(new DefaultPrettyPrinter()).build();
 		String responseStr = broker.invoke(s(req(1, "testClassMethod", null)));
 		assertEquals("testClassMethod", mapper.readValue(responseStr, Map.class).get("result"));
 		responseStr = broker.invoke(s(req(1, "testSuperClassMethod", null)));
 		assertEquals("testSuperClassMethod", mapper.readValue(responseStr, Map.class).get("result"));
-		responseStr = broker.invoke(s(req(1, "testInterfaceMethod", null)));
+		responseStr = broker.invoke(s(req(1, "testInterfaceMethod", l(new TestPayload("HelloWorld"), TestPayload.class.getName()))));
 		assertEquals("testInterfaceMethod", mapper.readValue(responseStr, Map.class).get("result"));
 		responseStr = broker.invoke(s(req(1, "testIgnoredMethod", null)));
 		assertNull(mapper.readValue(responseStr, Map.class).get("result"));
@@ -53,6 +52,10 @@ public class InheritanceTest {
 		return new Request(id, String.format("%s.%s", className, method), params);
 	}
 
+	private static List<? extends Object> l(Object... params) {
+		return Arrays.asList(params);
+	}
+
 	private static String s(Object m) {
 		return s(m, new ObjectMapper());
 	}
@@ -66,7 +69,7 @@ public class InheritanceTest {
 		}
 		return null;
 	}
-	
+
 	public static class TestClass extends TestIntermediateClass {
 		public String testClassMethod() {
 			return new Throwable().getStackTrace()[0].getMethodName();
@@ -77,7 +80,7 @@ public class InheritanceTest {
 			return new Throwable().getStackTrace()[0].getMethodName();
 		}
 	}
-	
+
 	public static class TestIntermediateClass extends TestSuperClass {
 		public String testClassMethod() {
 			return new Throwable().getStackTrace()[0].getMethodName();
@@ -87,16 +90,36 @@ public class InheritanceTest {
 			return new Throwable().getStackTrace()[0].getMethodName();
 		}
 	}
-	
-	public static abstract class TestSuperClass implements TestInterface {
+
+	public static abstract class TestSuperClass implements TestInterface<TestPayload> {
 		public String testSuperClassMethod() {
 			return new Throwable().getStackTrace()[0].getMethodName();
 		}
 	}
-	
-	public static interface TestInterface {
-		public default String testInterfaceMethod() {
+
+	public static interface TestInterface<P> {
+		public default String testInterfaceMethod(P payload, String payloadType) {
+			assertEquals(payloadType, payload.getClass().getName());
 			return new Throwable().getStackTrace()[0].getMethodName();
+		}
+	}
+
+	public static class TestPayload {
+		private String content;
+
+		public TestPayload() {
+		}
+
+		public TestPayload(String content) {
+			this.content = content;
+		}
+
+		public String getContent() {
+			return content;
+		}
+
+		public void setContent(String content) {
+			this.content = content;
 		}
 	}
 }
