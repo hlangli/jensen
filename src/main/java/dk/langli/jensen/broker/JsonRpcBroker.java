@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class JsonRpcBroker {
 	public void invoke(InputStream jsonRequest, OutputStream out) {
 		String request = null;
 		try {
-			request = IOUtils.toString(jsonRequest);
+			request = IOUtils.toString(jsonRequest, Charset.defaultCharset());
 		}
 		catch(IOException e) {
 			log.error("Cannot read jsonRequest from InputStream", e);
@@ -175,7 +176,7 @@ public class JsonRpcBroker {
 			log.trace("Call " + methodSignature);
 			Object instance = null;
 			if(!Modifier.isStatic(method.getModifiers())) {
-				instance = getInstance(method.getDeclaringClass(), request);
+				instance = getInstance(methodCall.getSubjectClass(), request);
 			}
 			if(invocationIntercepter != null) {
 				invocationIntercepter.onBeforeInvocation(method, instance, methodCall.getParams());

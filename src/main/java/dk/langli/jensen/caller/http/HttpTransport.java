@@ -1,6 +1,7 @@
 package dk.langli.jensen.caller.http;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -24,7 +25,7 @@ public class HttpTransport implements Transport {
         try {
             JsonHttp http = new JsonHttp(jsonRpcEndpoint);
             jsonRpcResponseStream = http.post("", jsonRpcRequest);
-            jsonRpcResponse = IOUtils.toString(jsonRpcResponseStream);
+            jsonRpcResponse = IOUtils.toString(jsonRpcResponseStream, Charset.defaultCharset());
         }
         catch(IOException e) {
             if(jsonRpcResponseStream != null) {

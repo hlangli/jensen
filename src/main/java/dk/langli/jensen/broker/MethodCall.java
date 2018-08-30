@@ -4,10 +4,12 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 class MethodCall {
+	private Class<?> subjectClass;
 	private Method method = null;
 	private List<? extends Object> params = null;
 	
-	public MethodCall(Method method, List<? extends Object> params) {
+	public MethodCall(Class<?> subjectClass, Method method, List<? extends Object> params) {
+		this.subjectClass = subjectClass;
 		this.method = method;
 		this.params = params;
 	}
@@ -20,4 +22,7 @@ class MethodCall {
 		return params;
 	}
 
+	public Class<?> getSubjectClass() {
+		return subjectClass;
+	}
 }

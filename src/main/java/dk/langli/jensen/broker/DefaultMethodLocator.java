@@ -3,9 +3,11 @@ package dk.langli.jensen.broker;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,11 +48,13 @@ public class DefaultMethodLocator implements MethodLocator {
 
 	private MethodCall getMethodCall(Class<?> clazz, String methodName, List<? extends Object> requestParams) throws MethodNotFoundException {
 		MethodCall methodCall = null;
-		Method[] methods = clazz.getMethods();
+		List<Method> methods = Arrays.asList(clazz.getMethods()).stream()
+   			.filter(m -> m.getAnnotation(JsonRpcIgnore.class) == null)
+   			.collect(Collectors.toList());
 		int methodIndex = 0;
 		Map<String, IncompatibleParameter> incompatibleMethods = new HashMap<>();
-		while(methodCall == null && methodIndex < methods.length) {
-			Method method = methods[methodIndex++];
+		while(methodCall == null && methodIndex < methods.size()) {
+			Method method = methods.get(methodIndex++);
 			String signature = method.getName() + "(" + toString(method.getParameterTypes()) + ")";
 			if(method.getName().equals(methodName)) {
 				if(Modifier.isPublic(method.getModifiers())) {
@@ -59,7 +63,7 @@ public class DefaultMethodLocator implements MethodLocator {
 						List<? extends Object> params = deserializeParameterList(requestParams, method.getParameterTypes());
 						if(requestParams == null && params.size() == 0 || params.size() == requestParams.size()) {
 							log.trace(signature + " is compatible with the parameter list");
-							methodCall = new MethodCall(method, params);
+							methodCall = new MethodCall(clazz, method, params);
 						}
 					}
 					catch(ParameterTypeException e) {
