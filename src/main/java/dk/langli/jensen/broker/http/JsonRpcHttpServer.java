@@ -44,7 +44,7 @@ public class JsonRpcHttpServer {
             public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
                 String responseJson = broker.invoke(IOUtils.toString(request.getInputStream(), Charset.defaultCharset()));
                 response.getWriter().write(responseJson);
-                response.getOutputStream().close();
+                response.getWriter().close();
             }
         });
     }
