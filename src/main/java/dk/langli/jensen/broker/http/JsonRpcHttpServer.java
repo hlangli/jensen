@@ -2,11 +2,13 @@ package dk.langli.jensen.broker.http;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -40,7 +42,8 @@ public class JsonRpcHttpServer {
         server.setHandler(new AbstractHandler() {
             @Override
             public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-                broker.invoke(request.getInputStream(), response.getOutputStream());
+                String responseJson = broker.invoke(IOUtils.toString(request.getInputStream(), Charset.defaultCharset()));
+                response.getWriter().write(responseJson);
                 response.getOutputStream().close();
             }
         });

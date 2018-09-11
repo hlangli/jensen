@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,23 +55,7 @@ public class JsonRpcBroker {
 	}
 
 	public String invoke(String jsonRequest) {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		invoke(jsonRequest, out);
-		return out.size() == 0 ? null : out.toString();
-	}
-
-	public void invoke(InputStream jsonRequest, OutputStream out) {
-		String request = null;
-		try {
-			request = IOUtils.toString(jsonRequest, Charset.defaultCharset());
-		}
-		catch(IOException e) {
-			log.error("Cannot read jsonRequest from InputStream", e);
-		}
-		invoke(request, out);
-	}
-
-	public void invoke(String jsonRequest, OutputStream out) {
+		String responseJson = null;
 		JsonRpcResponse response = null;
 		Request request = null;
 		Object id = null;
@@ -120,52 +105,37 @@ public class JsonRpcBroker {
 		catch(IOException e) {
 			response = new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request));
 		}
-        catch(Exception e) {
-            response = new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request));
-        }
-		if(id != null || request == null) {
-			try {
-				if(responseHandler != null) {
-					response = responseHandler.onResponse(response);
-				}
-				write(response, out);
-			}
-			catch(JsonGenerationException e) {
-				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
-			}
-			catch(JsonMappingException e) {
-				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
-			}
-			catch(IOException e) {
-				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request)), out);
-			}
-			catch(JsonRpcException e) {
-				tryWrite(new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request)), out);
-			}
+		catch(Exception e) {
+			response = new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request));
 		}
-	}
-
-	private void tryWrite(JsonRpcResponse response, OutputStream out) {
 		try {
-			write(response, out);
+			if(id != null || request == null) {
+				try {
+					if(responseHandler != null) {
+						response = responseHandler.onResponse(response);
+					}
+					responseJson = serialize(response);
+				}
+				catch(JsonRpcException e) {
+					responseJson = serialize(new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request)));
+				}
+				if(responseJson == null) {
+					throw new NullPointerException("Response is null");
+				}
+			}
 		}
-		catch(JsonGenerationException e) {
-			log.error("Cannot write response to OutputStream", e);
+		catch(JsonProcessingException e) {
+			throw new RuntimeException("Failed to serialize response", e);
 		}
-		catch(JsonMappingException e) {
-			log.error("Cannot write response to OutputStream", e);
-		}
-		catch(IOException e) {
-			log.error("Cannot write response to OutputStream", e);
-		}
+		return responseJson;
 	}
 
-	private void write(JsonRpcResponse response, OutputStream out) throws JsonGenerationException, JsonMappingException, IOException {
+	private String serialize(JsonRpcResponse response) throws JsonProcessingException {
 		ObjectWriter writer = mapper.writer();
 		if(prettyPrinter != null) {
 			writer = writer.with(prettyPrinter);
 		}
-		writer.writeValue(out, response);
+		return writer.writeValueAsString(response);
 	}
 
 	private Object invoke(MethodCall methodCall, Request request) throws JsonRpcException {
