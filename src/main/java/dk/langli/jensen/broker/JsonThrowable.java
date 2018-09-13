@@ -11,9 +11,9 @@ class JsonThrowable extends JsonCause {
 		super(target, null);
 	}
 
-	public JsonThrowable(Throwable target, Map<String, Object> data, Request request) {
-		super(target, data);
-	    this.request = request;
+	public JsonThrowable(Throwable target, Map<String, Object> data, Request request, ExceptionUnwrapFilter exceptionUnwrapFilter) {
+		super(target, data, exceptionUnwrapFilter);
+		this.request = request;
 	}
 
 	public Request getRequest() {

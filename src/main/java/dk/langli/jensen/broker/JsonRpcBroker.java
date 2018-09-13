@@ -1,22 +1,16 @@
 package dk.langli.jensen.broker;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.PrettyPrinter;
@@ -38,7 +32,8 @@ public class JsonRpcBroker {
 	private final InstanceLocator instanceLocator;
 	private final PrettyPrinter prettyPrinter;
 	private final SecurityFilter securityFilter;
-	
+	private final ExceptionUnwrapFilter exceptionUnwrapFilter;
+
 	public static JsonRpcBrokerBuilder builder() {
 	    return new JsonRpcBrokerBuilder();
 	}
@@ -52,6 +47,7 @@ public class JsonRpcBroker {
 		prettyPrinter = builder.getPrettyPrinter();
 		securityFilter = builder.getSecurityFilter();
 		methodLocator = builder.getMethodLocator() != null ? builder.getMethodLocator() : new DefaultMethodLocator(mapper);
+		exceptionUnwrapFilter = builder.getExceptionUnwrapFilter() != null ? builder.getExceptionUnwrapFilter() : e -> true;
 	}
 
 	public String invoke(String jsonRequest) {
@@ -66,7 +62,7 @@ public class JsonRpcBroker {
 				if(request.getJsonrpc().equals(JSONRPC)) {
 					if(securityFilter != null && !securityFilter.isAllowed(request)) {
 						String message = String.format("Invocation of %s not allowed", request.getMethod());
-						throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new SecurityException(message), request));
+						throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new SecurityException(message), request, exceptionUnwrapFilter));
 					}
 					else {
 						MethodCall methodCall = methodLocator.getInvocation(request);
@@ -78,11 +74,11 @@ public class JsonRpcBroker {
 					}
 				}
 				else {
-					throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("JSON-RPC " + request.getJsonrpc() + " is unsupported.  Use " + JSONRPC + " instead"), request));
+					throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("JSON-RPC " + request.getJsonrpc() + " is unsupported.  Use " + JSONRPC + " instead"), request, exceptionUnwrapFilter));
 				}
 			}
 			else {
-				throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("Request is missing"), request));
+				throw new JsonRpcException(JsonRpcError.INVALID_REQUEST.toError(new Exception("Request is missing"), request, exceptionUnwrapFilter));
 			}
 		}
 		catch(JsonRpcException e) {
@@ -94,19 +90,19 @@ public class JsonRpcBroker {
 				incompatible = new HashMap<>();
 				incompatible.put("incompatible", e.getIncompatibleMethods());
 			}
-			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, incompatible, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, incompatible, request, exceptionUnwrapFilter));
 		}
 		catch(ClassNotFoundException e) {
-			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, request, exceptionUnwrapFilter));
 		}
 		catch(JsonMappingException | JsonParseException e) {
-			response = new JsonRpcResponse(id, null, JsonRpcError.PARSE_ERROR.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.PARSE_ERROR.toError(e, request, exceptionUnwrapFilter));
 		}
 		catch(IOException e) {
-			response = new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request, exceptionUnwrapFilter));
 		}
 		catch(Exception e) {
-			response = new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request));
+			response = new JsonRpcResponse(id, null, JsonRpcError.INTERNAL_ERROR.toError(e, request, exceptionUnwrapFilter));
 		}
 		try {
 			if(id != null || request == null) {
@@ -117,7 +113,7 @@ public class JsonRpcBroker {
 					responseJson = serialize(response);
 				}
 				catch(JsonRpcException e) {
-					responseJson = serialize(new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request)));
+					responseJson = serialize(new JsonRpcResponse(id, null, JsonRpcError.SERVER_ERROR.toError(e, request, exceptionUnwrapFilter)));
 				}
 				if(responseJson == null) {
 					throw new NullPointerException("Response is null");
@@ -156,17 +152,17 @@ public class JsonRpcBroker {
 		catch(IllegalArgumentException e) {
 			String message = "Method call " + methodSignature + " cannot accept the parameters given (" + methodCall.getParams().size() + (methodCall.getParams().size() == method.getParameterTypes().length ? " = " : " != ") + method.getParameterTypes().length + ")";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request));
+			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request, exceptionUnwrapFilter));
 		}
 		catch(IllegalAccessException e) {
 			String message = "Method call " + methodSignature + " cannot be accessed";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request));
+			throw new JsonRpcException(JsonRpcError.INVALID_PARAMS.toError(new Exception(message), request, exceptionUnwrapFilter));
 		}
 		catch(InvocationTargetException e) {
 			String message = "Method call " + methodSignature + " threw an Exception";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.SERVER_ERROR.toError(e.getTargetException(), request));
+			throw new JsonRpcException(JsonRpcError.SERVER_ERROR.toError(e.getTargetException(), request, exceptionUnwrapFilter));
 		}
 		return result;
 	}
@@ -190,12 +186,12 @@ public class JsonRpcBroker {
 		catch(InstantiationException e) {
 			String message = "Class " + clazz.getSimpleName() + " cannot be instantiated with a no-args constructor";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message), request));
+			throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message), request, exceptionUnwrapFilter));
 		}
 		catch(IllegalAccessException e) {
 			String message = "Class " + clazz.getSimpleName() + " must not be instantiated with a no-args constructor";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message), request));
+			throw new JsonRpcException(JsonRpcError.METHOD_NOT_FOUND.toError(new Exception(message), request, exceptionUnwrapFilter));
 		}
 		return instance;
 	}

@@ -21,11 +21,11 @@ class JsonCause {
 	private JsonCause cause = null;
 	private Map<String, Object> data;
 
-	public JsonCause(Throwable target) {
-		this(target, null);
+	public JsonCause(Throwable target, ExceptionUnwrapFilter exceptionUnwrapFilter) {
+		this(target, null, exceptionUnwrapFilter);
 	}
 
-	public JsonCause(Throwable target, Map<String, Object> data) {
+	public JsonCause(Throwable target, Map<String, Object> data, ExceptionUnwrapFilter exceptionUnwrapFilter) {
 		exception = target.getClass().getName();
 		message = target.getMessage();
 		StackTraceElement[] stackTrace = target.getStackTrace();
@@ -36,14 +36,16 @@ class JsonCause {
 		}
 		Throwable cause = target.getCause();
 
-		this.data = Arrays.asList(target.getClass().getDeclaredMethods()).stream()
-				.filter(m -> m.getName().startsWith("get") || m.getName().startsWith("is"))
-				.filter(m -> !m.getReturnType().equals(Void.TYPE))
-				.collect(toNvlMap(m -> getKey(m), m -> getValue(target, m), (a, b) -> b));
+		if(exceptionUnwrapFilter.isUnwrappable(target.getClass())) {
+			this.data = Arrays.asList(target.getClass().getDeclaredMethods()).stream()
+					.filter(m -> m.getName().startsWith("get") || m.getName().startsWith("is"))
+					.filter(m -> !m.getReturnType().equals(Void.TYPE))
+					.collect(toNvlMap(m -> getKey(m), m -> getValue(target, m), (a, b) -> b));
+		}
 		if(data != null) {
 			this.data.putAll(data);
 		}
-		this.cause = cause != null ? new JsonCause(cause) : null;
+		this.cause = cause != null ? new JsonCause(cause, exceptionUnwrapFilter) : null;
 	}
 
 	private Object getValue(Object o, Method method) {
