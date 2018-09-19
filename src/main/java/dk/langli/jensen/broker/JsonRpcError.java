@@ -24,11 +24,6 @@ public enum JsonRpcError {
 		return toError((Throwable) null, request, exceptionUnwrapFilter);
 	}
 
-	@Deprecated
-	public Error toError(Map<String, Object> data, Request request) {
-		return new Error(code, message, data);
-	}
-
 	public Error toError(Throwable e, Request request, ExceptionUnwrapFilter exceptionUnwrapFilter) {
 		return toError(e, null, request, exceptionUnwrapFilter);
 	}

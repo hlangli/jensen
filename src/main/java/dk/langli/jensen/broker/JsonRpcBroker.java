@@ -33,6 +33,7 @@ public class JsonRpcBroker {
 	private final PrettyPrinter prettyPrinter;
 	private final SecurityFilter securityFilter;
 	private final ExceptionUnwrapFilter exceptionUnwrapFilter;
+	private final ExceptionHandler exceptionHandler;
 
 	public static JsonRpcBrokerBuilder builder() {
 	    return new JsonRpcBrokerBuilder();
@@ -48,6 +49,7 @@ public class JsonRpcBroker {
 		securityFilter = builder.getSecurityFilter();
 		methodLocator = builder.getMethodLocator() != null ? builder.getMethodLocator() : new DefaultMethodLocator(mapper);
 		exceptionUnwrapFilter = builder.getExceptionUnwrapFilter() != null ? builder.getExceptionUnwrapFilter() : e -> true;
+		exceptionHandler = builder.getExceptionHandler() != null ? builder.getExceptionHandler() : e -> e;
 	}
 
 	public String invoke(String jsonRequest) {
@@ -162,7 +164,8 @@ public class JsonRpcBroker {
 		catch(InvocationTargetException e) {
 			String message = "Method call " + methodSignature + " threw an Exception";
 			log.warn(message, e);
-			throw new JsonRpcException(JsonRpcError.SERVER_ERROR.toError(e.getTargetException(), request, exceptionUnwrapFilter));
+			Throwable e1 = exceptionHandler.handle(e.getTargetException());
+			throw new JsonRpcException(JsonRpcError.SERVER_ERROR.toError(e1, request, exceptionUnwrapFilter));
 		}
 		return result;
 	}
@@ -172,7 +175,8 @@ public class JsonRpcBroker {
 		List<? extends Object> params = methodCall.getParams();
 		String methodSignature = method.getName() + "(";
 		for(int i = 0; params != null && i < params.size(); i++) {
-			methodSignature += (i != 0 ? ", " : "") + params.get(i).getClass().getSimpleName();
+			Class<?> paramType = params.get(i) != null ? params.get(i).getClass() : method.getParameterTypes()[i];
+			methodSignature += (i != 0 ? ", " : "") + paramType.getSimpleName();
 		}
 		methodSignature += ")";
 		return methodSignature;

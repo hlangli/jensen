@@ -18,6 +18,7 @@ public class JsonRpcBrokerBuilder {
 	private InstanceLocator instanceLocator = null;
 	private MethodLocator methodLocator = null;
 	private ExceptionUnwrapFilter exceptionUnwrapFilter = null;
+	private ExceptionHandler exceptionHandler = null;
 
 	protected JsonRpcBrokerBuilder() {
 	}
@@ -71,6 +72,11 @@ public class JsonRpcBrokerBuilder {
 		return this;
 	}
 
+	public JsonRpcBrokerBuilder withExceptionHandler(ExceptionHandler exceptionHandler) {
+		this.exceptionHandler = exceptionHandler;
+		return this;
+	}
+
 	public PrettyPrinter getPrettyPrinter() {
 		return prettyPrinter;
 	}
@@ -105,5 +111,9 @@ public class JsonRpcBrokerBuilder {
 
 	public ExceptionUnwrapFilter getExceptionUnwrapFilter() {
 		return exceptionUnwrapFilter;
+	}
+
+	public ExceptionHandler getExceptionHandler() {
+		return exceptionHandler;
 	}
 }

@@ -64,7 +64,7 @@ public class DefaultMethodLocator implements MethodLocator {
 					log.trace("Check method parameter compatibility: " + method.getName() + "(" + toString(parameterTypes) + ")");
 					try {
 						List<? extends Object> params = deserializeParameterList(requestParams, parameterTypes);
-						if(requestParams == null && params.size() == 0 || params.size() == requestParams.size()) {
+						if((requestParams == null && parameterTypes.size() == 0) || parameterTypes.size() == requestParams.size()) {
 							log.trace(signature + " is compatible with the parameter list");
 							methodCall = new MethodCall(clazz, method, params);
 						}
