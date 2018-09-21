@@ -122,8 +122,14 @@ public class JsonRpcBroker {
 				}
 			}
 		}
-		catch(JsonProcessingException e) {
-			throw new RuntimeException("Failed to serialize response", e);
+		catch(Exception e) {
+			Error error = JsonRpcError.SERVER_ERROR.toError(e, request, x -> false);
+			try {
+				responseJson = serialize(new JsonRpcResponse(id, null, error));
+			}
+			catch(JsonProcessingException e1) {
+				throw new RuntimeException("Failed to serialize response from catched exception", e);
+			}
 		}
 		return responseJson;
 	}
