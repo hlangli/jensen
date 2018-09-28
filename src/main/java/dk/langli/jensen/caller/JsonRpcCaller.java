@@ -113,11 +113,11 @@ public class JsonRpcCaller {
             Class<?> type = Class.forName(className);
             Method method = type.getMethod(methodName, getParameterTypes(params));
             returnType = method.getGenericReturnType();
+            methodName = findImplClassname(type)+"."+methodName;
         }
         catch(NoSuchMethodException | SecurityException | ClassNotFoundException e) {
             throw new JsonRpcException(e);
         }
-        methodName = className+"."+methodName;
         return (T) call(methodName, returnType, params);
     }
     
@@ -127,5 +127,14 @@ public class JsonRpcCaller {
             parameterTypes.add(param.getClass());
         }
         return parameterTypes.toArray(new Class<?>[parameterTypes.size()]);
+    }
+    
+    private String findImplClassname(Class<?> type) {
+   	 String classname = type.getName();
+   	 JsonRpcImpl impl = type.getAnnotation(JsonRpcImpl.class);
+   	 if(impl != null) {
+   		 classname = impl.remote().getName();
+   	 }
+   	 return classname;
     }
 }
