@@ -40,7 +40,15 @@ public class JsonRpcBrokerTest {
         return object1.getObject2();
     }
 
-    public void notification(Object1 object1, int år) {
+	public Object2 getFirstObject2Generics(List<Object1> object1s) {
+		return object1s.get(0).getObject2();
+	}
+
+	public <O extends Object1> Object2 getFirstObject2MethodGenerics(List<O> object1s) {
+		return object1s.get(0).getObject2();
+	}
+
+	public void notification(Object1 object1, int år) {
         log.trace("Testing notify");
     }
 
@@ -154,6 +162,34 @@ public class JsonRpcBrokerTest {
         Assert.assertEquals(Object1.class.getName(), getObject2.get("parameterType"));
         Assert.assertEquals(0, getObject2.get("index"));
     }
+    
+	@Test
+	public void testGenerics() throws JsonParseException, JsonMappingException, IOException {
+		Request request = req(3, "getFirstObject2Generics", l(
+				l(
+						m(
+								m("integer", 99),
+								m("string", "weld"),
+								m("object2", m("svend", "grethe"))
+						),
+						m(
+								m("integer", 44),
+								m("string", "Goodday"),
+								m("object2", m("svend", "blabla"))
+						)
+				)
+		));
+		String responseStr = newJensenBuilder().build().invoke(s(request));
+		ObjectMapper mapper = new ObjectMapper();
+		JsonRpcResponse response = mapper.readValue(responseStr, JsonRpcResponse.class);
+		if(response.getError() != null) {
+			log.error("Generics not working: "+mapper.writeValueAsString(response.getError()));
+		}
+		Object object = mapper.convertValue(response.getResult(), Object2.class);
+		Assert.assertEquals(Object2.class, object.getClass());
+		Object2 object2 = (Object2) object;
+		Assert.assertEquals("grethe", object2.getSvend());
+	}
     
     private static JsonRpcResponse resp(Object id, Object result, dk.langli.jensen.broker.Error error) {
         return new JsonRpcResponse(id, result, error);

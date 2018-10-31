@@ -4,9 +4,10 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
+import java.lang.reflect.Type;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
+import ru.vyarus.java.generics.resolver.GenericsResolver;
 
 public class JsonRpcBroker {
 	public static final String JSONRPC = "2.0";
@@ -87,12 +89,12 @@ public class JsonRpcBroker {
 			response = new JsonRpcResponse(id, null, e.getError());
 		}
 		catch(MethodNotFoundException e) {
-			Map<String, Object> incompatible = null;
-			if(e.getIncompatibleMethods() != null && e.getIncompatibleMethods().size() > 0) {
-				incompatible = new HashMap<>();
-				incompatible.put("incompatible", e.getIncompatibleMethods());
-			}
-			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, incompatible, request, exceptionUnwrapFilter));
+//			Map<String, Object> incompatible = null;
+//			if(e.getIncompatibleMethods() != null && e.getIncompatibleMethods().size() > 0) {
+//				incompatible = new HashMap<>();
+//				incompatible.put("incompatible", e.getIncompatibleMethods());
+//			}
+			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, Collections.emptyMap(), request, exceptionUnwrapFilter));
 		}
 		catch(ClassNotFoundException e) {
 			response = new JsonRpcResponse(id, null, JsonRpcError.METHOD_NOT_FOUND.toError(e, request, exceptionUnwrapFilter));
@@ -176,16 +178,32 @@ public class JsonRpcBroker {
 		return result;
 	}
 
-	private String getMethodSignature(MethodCall methodCall) {
+	protected static String getMethodSignature(MethodCall methodCall) {
 		Method method = methodCall.getMethod();
-		List<? extends Object> params = methodCall.getParams();
-		String methodSignature = method.getName() + "(";
-		for(int i = 0; params != null && i < params.size(); i++) {
-			Class<?> paramType = params.get(i) != null ? params.get(i).getClass() : method.getParameterTypes()[i];
-			methodSignature += (i != 0 ? ", " : "") + paramType.getSimpleName();
+		List<Type> parameterTypes = resolveParameterTypes(methodCall.getSubjectClass(), method);
+		return method.getName() + "(" + stringify(parameterTypes) + ")";
+	}
+	
+	protected static String stringify(List<? extends Type> parameterTypes) {
+		return parameterTypes.stream()
+				.map(JsonRpcBroker::simplify)
+				.collect(Collectors.joining(", "));
+	}
+	
+	protected static List<Type> resolveParameterTypes(Class<?> classContext, Method method) {
+		List<Type> parameterTypes = null;
+		try {
+			parameterTypes = GenericsResolver.resolve(classContext).method(method).resolveParametersTypes();
 		}
-		methodSignature += ")";
-		return methodSignature;
+		catch(Exception e) {
+			parameterTypes = Collections.emptyList();
+		}
+		return parameterTypes;
+	}
+
+	private static String simplify(Type type) {
+		String name = type.getTypeName();
+		return name.replaceFirst("(?:[^.<]+\\.)*", "").replaceAll("(<|, ?)(?:[^\\.]+\\.)*", "$1");
 	}
 
 	private Object getInstance(Class<?> clazz, Request request) throws JsonRpcException {

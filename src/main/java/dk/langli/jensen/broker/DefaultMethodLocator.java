@@ -1,5 +1,7 @@
 package dk.langli.jensen.broker;
 
+import static dk.langli.jensen.broker.JsonRpcBroker.*;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -13,17 +15,20 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
 import dk.langli.jensen.Request;
-import ru.vyarus.java.generics.resolver.GenericsResolver;
 
 public class DefaultMethodLocator implements MethodLocator {
 	private final Logger log = LoggerFactory.getLogger(DefaultMethodLocator.class);
 	private final ObjectMapper mapper;
+	private final TypeFactory tf;
 
 	public DefaultMethodLocator(ObjectMapper mapper) {
 		this.mapper = mapper;
+		this.tf = TypeFactory.defaultInstance();
 	}
 
 	public static String getMethodName(Request request) {
@@ -57,13 +62,13 @@ public class DefaultMethodLocator implements MethodLocator {
 		Map<String, IncompatibleParameter> incompatibleMethods = new HashMap<>();
 		while(methodCall == null && methodIndex < methods.size()) {
 			Method method = methods.get(methodIndex++);
-			String signature = method.getName() + "(" + toString(Arrays.asList(method.getGenericParameterTypes())) + ")";
+			List<Type> parameterTypes = resolveParameterTypes(clazz, method);
+			String signature = method.getName() + "(" + stringify(parameterTypes) + ")";
 			if(method.getName().equals(methodName)) {
 				if(Modifier.isPublic(method.getModifiers())) {
-					List<Class<?>> parameterTypes = getParameterTypes(clazz, method);
-					log.trace("Check method parameter compatibility: " + method.getName() + "(" + toString(parameterTypes) + ")");
+					log.trace("Check method parameter compatibility: " + method.getName() + "(" + stringify(parameterTypes) + ")");
 					try {
-						List<? extends Object> params = deserializeParameterList(requestParams, parameterTypes);
+						List<? extends Object> params = deserializeParameterList(clazz, requestParams, parameterTypes);
 						if((requestParams == null && parameterTypes.size() == 0) || parameterTypes.size() == requestParams.size()) {
 							log.trace(signature + " is compatible with the parameter list");
 							methodCall = new MethodCall(clazz, method, params);
@@ -81,34 +86,20 @@ public class DefaultMethodLocator implements MethodLocator {
 		}
 		return methodCall;
 	}
-
-	private List<Class<?>> getParameterTypes(Class<?> clazz, Method method) {
-		return GenericsResolver
-				.resolve(clazz)
-				.method(method)
-				.resolveParameters();
-	}
-
-	private String toString(List<? extends Type> parameterTypes) {
-		String parmTypes = "";
-		for(int i = 0; parameterTypes != null && i < parameterTypes.size(); i++) {
-			Type type = parameterTypes.get(i);
-			parmTypes += (i != 0 ? ", " : "") + (type instanceof Class<?> ? ((Class<?>) type).getSimpleName() : type.getTypeName());
-		}
-		return parmTypes;
-	}
-
-	private List<Object> deserializeParameterList(List<? extends Object> params, List<Class<?>> parameterTypes) throws ParameterTypeException {
+	
+	private List<Object> deserializeParameterList(Class<?> contextClass, List<? extends Object> params, List<Type> parameterTypes) throws ParameterTypeException {
 		List<Object> deserializedparams = new ArrayList<Object>();
 		if(params != null && params.size() == parameterTypes.size()) {
 			for(int i = 0; i < parameterTypes.size(); i++) {
+				Type parameterType = parameterTypes.get(i);
 				try {
-					Object o = mapper.convertValue(params.get(i), parameterTypes.get(i));
+					JavaType genericType = tf.constructType(parameterType, contextClass);
+					Object o = mapper.convertValue(params.get(i), genericType);
 					deserializedparams.add(o);
 				}
 				catch(IllegalArgumentException e) {
-					String message = String.format("Parameter[%s] is not a %s", i, parameterTypes.get(i).getSimpleName());
-					throw new ParameterTypeException(message, parameterTypes.get(i), i);
+					String message = String.format("Parameter[%s] is not a %s", i, parameterType.getTypeName());
+					throw new ParameterTypeException(message, parameterType, i);
 				}
 			}
 		}

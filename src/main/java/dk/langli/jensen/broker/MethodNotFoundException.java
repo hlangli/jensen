@@ -4,18 +4,18 @@ import java.util.Map;
 
 @SuppressWarnings("serial")
 public class MethodNotFoundException extends Exception {
-    private final Map<String, IncompatibleParameter> incompatibleMethods;
+    private final Map<String, IncompatibleParameter> incompatible;
 
-    public MethodNotFoundException(String message, Map<String, IncompatibleParameter> incompatibleMethods) {
-        this(message, incompatibleMethods, null);
+    public MethodNotFoundException(String message, Map<String, IncompatibleParameter> incompatible) {
+        this(message, incompatible, null);
     }
 
-    public MethodNotFoundException(String message, Map<String, IncompatibleParameter> incompatibleMethods, Throwable target) {
+    public MethodNotFoundException(String message, Map<String, IncompatibleParameter> incompatible, Throwable target) {
         super(message, target);
-        this.incompatibleMethods = incompatibleMethods;
+        this.incompatible = incompatible;
     }
 
-    public Map<String, IncompatibleParameter> getIncompatibleMethods() {
-        return incompatibleMethods;
+    public Map<String, IncompatibleParameter> getIncompatible() {
+        return incompatible;
     }
 }

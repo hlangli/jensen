@@ -1,14 +1,16 @@
 package dk.langli.jensen.broker;
 
+import java.lang.reflect.Type;
+
 public class IncompatibleParameter {
-    private Class<?> parameterType;
+    private Type parameterType;
     private int index;
 
-    public Class<?> getParameterType() {
+    public Type getParameterType() {
         return parameterType;
     }
 
-    public void setParameterType(Class<?> parameterType) {
+    public void setParameterType(Type parameterType) {
         this.parameterType = parameterType;
     }
 
