@@ -23,11 +23,13 @@ import dk.langli.jensen.Request;
 
 public class DefaultMethodLocator implements MethodLocator {
 	private final Logger log = LoggerFactory.getLogger(DefaultMethodLocator.class);
+	private final ExceptionUnwrapFilter exceptionUnwrapFilter;
 	private final ObjectMapper mapper;
 	private final TypeFactory tf;
 
-	public DefaultMethodLocator(ObjectMapper mapper) {
+	public DefaultMethodLocator(ObjectMapper mapper, ExceptionUnwrapFilter exceptionUnwrapFilter) {
 		this.mapper = mapper;
+		this.exceptionUnwrapFilter = exceptionUnwrapFilter;
 		this.tf = TypeFactory.defaultInstance();
 	}
 
@@ -99,7 +101,7 @@ public class DefaultMethodLocator implements MethodLocator {
 				}
 				catch(IllegalArgumentException e) {
 					String message = String.format("Parameter[%s] is not a %s", i, parameterType.getTypeName());
-					throw new ParameterTypeException(message, parameterType, i);
+					throw new ParameterTypeException(message, parameterType, i, new JsonCause(e, exceptionUnwrapFilter));
 				}
 			}
 		}

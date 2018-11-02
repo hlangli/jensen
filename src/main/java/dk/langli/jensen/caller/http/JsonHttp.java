@@ -3,7 +3,10 @@ package dk.langli.jensen.caller.http;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,6 +28,7 @@ public class JsonHttp {
 	private URL url = null;
 	private Map<Class<? extends HttpRequestBase>, Map<String, String>> methodParams = new HashMap<Class<? extends HttpRequestBase>, Map<String, String>>();
 	private Map<String, String> params = new HashMap<String, String>();
+	private Map<String, List<String>> headers = new HashMap<>();
 	
 	public JsonHttp(String url) throws MalformedURLException {
 		this.url = new URL(url);
@@ -32,6 +36,16 @@ public class JsonHttp {
 	
 	public void addParam(String name, String value) {
 		params.put(name, value);
+	}
+
+	public void addHeader(String name, String value) {
+		headers.computeIfAbsent(name, k -> new ArrayList<>());
+		headers.get(name).add(value);
+	}
+	
+	public void addAuthentication(String username, String password) {
+		String credentials = String.format("%s:%s", username, password);
+		addHeader("Authorization", "Basic "+Base64.getEncoder().encodeToString(credentials.getBytes()));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -134,6 +148,11 @@ public class JsonHttp {
 	
 	private HttpInputStream execute(HttpUriRequest request) throws ClientProtocolException, IOException {
 		CloseableHttpClient http = HttpClients.createDefault();
+		for(String name: headers.keySet()) {
+			for(String value: headers.get(name)) {
+				request.addHeader(name, value);
+			}
+		}
 		CloseableHttpResponse response = http.execute(request);
 		return new HttpInputStream(http, response, response.getEntity().getContent());
 	}

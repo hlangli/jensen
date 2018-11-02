@@ -13,9 +13,17 @@ import dk.langli.jensen.caller.TransportException;
 public class HttpTransport implements Transport {
     private final Logger log = LoggerFactory.getLogger(HttpTransport.class);
     private final String jsonRpcEndpoint;
+    private final String username;
+    private final String password;
     
     public HttpTransport(String jsonRpcEndpoint) {
+   	 this(jsonRpcEndpoint, null, null);
+    }
+
+    public HttpTransport(String jsonRpcEndpoint, String username, String password) {
         this.jsonRpcEndpoint = jsonRpcEndpoint;
+        this.username = username;
+        this.password = password;
     }
     
     @Override
@@ -24,6 +32,9 @@ public class HttpTransport implements Transport {
         HttpInputStream jsonRpcResponseStream = null;
         try {
             JsonHttp http = new JsonHttp(jsonRpcEndpoint);
+            if(username != null) {
+            	http.addAuthentication(username, password);
+            }
             jsonRpcResponseStream = http.post("", jsonRpcRequest);
             jsonRpcResponse = IOUtils.toString(jsonRpcResponseStream, Charset.defaultCharset());
         }

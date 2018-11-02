@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
+import ru.vyarus.java.generics.resolver.GenericsResolver;
 
 public class JsonRpcCaller {
     private final Transport transport;
@@ -103,17 +104,28 @@ public class JsonRpcCaller {
         return call(2, params);
     }
 
+	public <T> T call(int callStackDistance, Object... params) throws JsonRpcException, TransportException {
+		StackTraceElement callStackSubject = new Throwable().getStackTrace()[callStackDistance];
+		String className = callStackSubject.getClassName();
+		String methodName = callStackSubject.getMethodName();
+		try {
+			Class<?> type = Class.forName(className);
+			className = findImplClassname(type);
+		}
+		catch(SecurityException | ClassNotFoundException e) {
+			throw new JsonRpcException(e);
+		}
+		return callMethod(className, methodName, params);
+	}
+	
     @SuppressWarnings("unchecked")
-    public <T> T call(int callStackDistance, Object... params) throws JsonRpcException, TransportException {
-        StackTraceElement callStackSubject = new Throwable().getStackTrace()[callStackDistance];
-        String className = callStackSubject.getClassName();
-        String methodName = callStackSubject.getMethodName();
+    public <T> T callMethod(String className, String methodName, Object... params) throws JsonRpcException, TransportException {
         Type returnType = null;
         try {
             Class<?> type = Class.forName(className);
             Method method = type.getMethod(methodName, getParameterTypes(params));
-            returnType = method.getGenericReturnType();
-            methodName = findImplClassname(type)+"."+methodName;
+            returnType = GenericsResolver.resolve(type).method(method).resolveReturnType();
+            methodName = className+"."+methodName;
         }
         catch(NoSuchMethodException | SecurityException | ClassNotFoundException e) {
             throw new JsonRpcException(e);

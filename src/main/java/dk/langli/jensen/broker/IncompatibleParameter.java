@@ -5,8 +5,17 @@ import java.lang.reflect.Type;
 public class IncompatibleParameter {
     private Type parameterType;
     private int index;
+    private JsonCause exception;
 
-    public Type getParameterType() {
+    public JsonCause getException() {
+		return exception;
+	}
+
+	public void setException(JsonCause exception) {
+		this.exception = exception;
+	}
+
+	public Type getParameterType() {
         return parameterType;
     }
 

@@ -12,12 +12,16 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
@@ -41,16 +45,23 @@ public class JsonRpcBroker {
 	    return new JsonRpcBrokerBuilder();
 	}
 
+	@SuppressWarnings("serial")
 	public JsonRpcBroker(JsonRpcBrokerBuilder builder) {
 		mapper = builder.getObjectMapper() != null ? builder.getObjectMapper() : new ObjectMapper();
+		mapper.registerModule(new SimpleModule().addSerializer(Type.class, new StdSerializer<Type>(Type.class) {
+			@Override
+			public void serialize(Type value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+		        gen.writeString(value.getTypeName());
+			}
+		}));
 		returnValueHandler = builder.getReturnValueHandler();
 		responseHandler = builder.getResponseHandler();
 		invocationIntercepter = builder.getInvocationIntercepter();
 		instanceLocator = builder.getInstanceLocator() != null ? builder.getInstanceLocator() : new DefaultInstanceLocator();
 		prettyPrinter = builder.getPrettyPrinter();
 		securityFilter = builder.getSecurityFilter();
-		methodLocator = builder.getMethodLocator() != null ? builder.getMethodLocator() : new DefaultMethodLocator(mapper);
 		exceptionUnwrapFilter = builder.getExceptionUnwrapFilter() != null ? builder.getExceptionUnwrapFilter() : e -> true;
+		methodLocator = builder.getMethodLocator() != null ? builder.getMethodLocator() : new DefaultMethodLocator(mapper, exceptionUnwrapFilter);
 		exceptionHandler = builder.getExceptionHandler() != null ? builder.getExceptionHandler() : e -> e;
 	}
 

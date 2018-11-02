@@ -51,7 +51,7 @@ public class JsonRpcRoundtripTest {
         String className = getClass().getName();
         String methodName = "testException";
         try {
-        	caller.call(String.format("%s.%s", className, methodName), null, null);
+        	caller.call(String.format("%s.%s", className, methodName), null, (Object[]) null);
         	Assert.fail();
         }
         catch(Exception e) {
