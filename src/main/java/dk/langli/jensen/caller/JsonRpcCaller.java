@@ -2,7 +2,6 @@ package dk.langli.jensen.caller;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -17,6 +16,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 
 import dk.langli.jensen.JsonRpcResponse;
 import dk.langli.jensen.Request;
+import dk.langli.jensen.broker.JsonRpcIgnore;
 import ru.vyarus.java.generics.resolver.GenericsResolver;
 
 public class JsonRpcCaller {
@@ -121,24 +121,32 @@ public class JsonRpcCaller {
     @SuppressWarnings("unchecked")
     public <T> T callMethod(String className, String methodName, Object... params) throws JsonRpcException, TransportException {
         Type returnType = null;
+        String fqMethodName = null;
         try {
             Class<?> type = Class.forName(className);
-            Method method = type.getMethod(methodName, getParameterTypes(params));
+            List<Method> methods = Arrays.asList(type.getMethods());
+            Method method = methods.stream()
+            		.filter(m -> m.getName().equals(methodName))
+           			.filter(m -> m.getAnnotation(JsonRpcIgnore.class) == null)
+            		.filter(m -> m.getParameterCount() == (params != null ? params.length : 0))
+            		.filter(m -> {
+            			Class<?>[] paramTypes = m.getParameterTypes();
+            			for(int i=0; i<paramTypes.length; i++) {
+            				if(!paramTypes[i].isInstance(params[i])) {
+            					return false;
+            				}
+            			}
+            			return true;
+            		})
+            		.findFirst()
+            		.orElseThrow(() -> new NoSuchMethodException(String.format("No method %s with the given parameters", methodName)));
             returnType = GenericsResolver.resolve(type).method(method).resolveReturnType();
-            methodName = className+"."+methodName;
+            fqMethodName = className+"."+methodName;
         }
-        catch(NoSuchMethodException | SecurityException | ClassNotFoundException e) {
+        catch(SecurityException | ClassNotFoundException | NoSuchMethodException e) {
             throw new JsonRpcException(e);
         }
-        return (T) call(methodName, returnType, params);
-    }
-    
-    private Class<?>[] getParameterTypes(Object[] params) {
-        List<Class<?>> parameterTypes = new ArrayList<>();
-        for(Object param: params) {
-            parameterTypes.add(param.getClass());
-        }
-        return parameterTypes.toArray(new Class<?>[parameterTypes.size()]);
+        return (T) call(fqMethodName, returnType, params);
     }
     
     private String findImplClassname(Class<?> type) {

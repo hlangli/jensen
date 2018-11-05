@@ -26,7 +26,7 @@ public class JsonRpcException extends Exception {
 
 	@JsonIgnore
     protected JsonRpcException(Throwable e) {
-        super(e.getMessage(), e.getCause());
+        super(e.getMessage(), e);
         setException(e.getClass().getName());
         setStackTrace(e.getStackTrace());
     }
