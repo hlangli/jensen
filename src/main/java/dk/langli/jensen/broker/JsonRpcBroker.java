@@ -192,7 +192,7 @@ public class JsonRpcBroker {
 	protected static String getMethodSignature(MethodCall methodCall) {
 		Method method = methodCall.getMethod();
 		List<Type> parameterTypes = resolveParameterTypes(methodCall.getSubjectClass(), method);
-		return method.getName() + "(" + stringify(parameterTypes) + ")";
+		return methodCall.getSubjectClass().getName() + "." + method.getName() + "(" + stringify(parameterTypes) + ")";
 	}
 	
 	protected static String stringify(List<? extends Type> parameterTypes) {
