@@ -93,10 +93,11 @@ public class DefaultMethodLocator implements MethodLocator {
 		List<Object> deserializedparams = new ArrayList<Object>();
 		if(params != null && params.size() == parameterTypes.size()) {
 			for(int i = 0; i < parameterTypes.size(); i++) {
+				Object param = params.get(i);
 				Type parameterType = parameterTypes.get(i);
 				try {
 					JavaType genericType = tf.constructType(parameterType, contextClass);
-					Object o = mapper.convertValue(params.get(i), genericType);
+					Object o = genericType.isPrimitive() || param != null ? o = mapper.convertValue(param, genericType) : null;
 					deserializedparams.add(o);
 				}
 				catch(IllegalArgumentException e) {
